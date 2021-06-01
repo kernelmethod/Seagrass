@@ -46,7 +46,7 @@ class Auditor:
         label: str,
         **kwargs,
     ) -> Callable:
-        """Wrap a function to be audited."""
+        """Wrap a function with a new auditing event."""
 
         if label in self.events:
             raise ValueError(
@@ -62,6 +62,18 @@ class Auditor:
                 return new_event.func(*args, **kwargs)
             else:
                 return new_event(*args, **kwargs)
+
+        return wrapper
+
+    def decorate(
+        self,
+        label: str,
+        **kwargs,
+    ) -> Callable:
+        """A function decorator that tells the auditor to monitor the decorated function."""
+
+        def wrapper(func):
+            return self.wrap(func, label, **kwargs)
 
         return wrapper
 
