@@ -11,4 +11,5 @@ setup(
     url="https://github.com/kernelmethod/Seagrass",
     packages=["seagrass"],
     install_requires=[],
+    python_requires=">=3.8.0",
 )
