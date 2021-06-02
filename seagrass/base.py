@@ -1,10 +1,10 @@
-from typing import Any, Tuple, Dict, Protocol, TypeVar
+import typing as t
 
 # Type variable for contexts returned by prehooks
-C = TypeVar("C")
+C = t.TypeVar("C")
 
 
-class ProtoHook(Protocol[C]):
+class ProtoHook(t.Protocol[C]):
     """Interface for hooks that can be used by Seagrass."""
 
     # Priority in which prehooks and posthooks should be executed.
@@ -22,12 +22,12 @@ class ProtoHook(Protocol[C]):
     posthook_priority: int = 0
 
     def prehook(
-        self, event_name: str, args: Tuple[Any, ...], kwargs: Dict[str, Any]
+        self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> C:
         """Run the prehook."""
         ...
 
-    def posthook(self, event_name: str, result: Any, context: C):
+    def posthook(self, event_name: str, result: t.Any, context: C):
         """Run the posthook."""
         ...
 

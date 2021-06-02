@@ -1,8 +1,19 @@
 import functools
 import logging
+import typing as t
 from contextlib import contextmanager
 from seagrass.events import Event
-from typing import Callable, Dict, Union
+
+# Global variable that keeps track of the auditor's logger for the
+# current auditing context.
+_audit_logger_stack: t.List[logging.Logger] = []
+
+
+def get_audit_logger() -> t.Optional[logging.Logger]:
+    if len(_audit_logger_stack) == 0:
+        return None
+    else:
+        return _audit_logger_stack[-1]
 
 
 class Auditor:
@@ -12,11 +23,11 @@ class Auditor:
     """
 
     logger: logging.Logger
-    events: Dict[str, Event]
-    event_wrappers: Dict[str, Callable]
+    events: t.Dict[str, Event]
+    event_wrappers: t.Dict[str, t.Callable]
     __enabled: bool = False
 
-    def __init__(self, logger: Union[str, logging.Logger] = "seagrass"):
+    def __init__(self, logger: t.Union[str, logging.Logger] = "seagrass"):
         """Create a new Auditor instance."""
         if isinstance(logger, logging.Logger):
             self.logger = logger
@@ -39,16 +50,18 @@ class Auditor:
         """Create a new context within which the auditor is enabled."""
         try:
             self.enable(True)
+            _audit_logger_stack.append(self.logger)
             yield None
         finally:
             self.enable(False)
+            _audit_logger_stack.pop()
 
     def wrap(
         self,
-        func: Callable,
+        func: t.Callable,
         label: str,
         **kwargs,
-    ) -> Callable:
+    ) -> t.Callable:
         """Wrap a function with a new auditing event."""
 
         if label in self.events:
@@ -72,7 +85,7 @@ class Auditor:
         self,
         label: str,
         **kwargs,
-    ) -> Callable:
+    ) -> t.Callable:
         """A function decorator that tells the auditor to monitor the decorated function."""
 
         def wrapper(func):

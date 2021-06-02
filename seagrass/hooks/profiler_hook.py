@@ -1,7 +1,7 @@
 import cProfile as prof
 import pstats
 import typing as t
-from seagrass.hooks import ProtoHook
+from seagrass.base import ProtoHook
 
 
 class ProfilerHook(ProtoHook):

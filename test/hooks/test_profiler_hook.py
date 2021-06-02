@@ -44,4 +44,4 @@ class ProfilerHookTestCase(unittest.TestCase):
         stats_profile = hook.get_stats().get_stats_profile()
         ausleep_profile = stats_profile.func_profiles["ausleep"]
         self.assertEqual(ausleep_profile.ncalls, "1")
-        self.assertAlmostEqual(ausleep_profile.cumtime, 0.01, places=4)
+        self.assertAlmostEqual(ausleep_profile.cumtime, 0.01, delta=0.005)

@@ -1,6 +1,6 @@
 import typing as t
 from collections import Counter
-from seagrass.hooks import ProtoHook
+from seagrass.base import ProtoHook
 
 
 class CounterHook(ProtoHook):

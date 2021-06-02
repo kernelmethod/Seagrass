@@ -1,7 +1,7 @@
 import inspect
 import typing as t
 from collections import Counter, defaultdict
-from seagrass.hooks import ProtoHook
+from seagrass.base import ProtoHook
 
 
 class TracedFrame(t.NamedTuple):
