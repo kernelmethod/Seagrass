@@ -1,14 +1,17 @@
+import typing as t
 from collections import Counter
 from seagrass.hooks import ProtoHook
-from typing import Any, Tuple, Dict
 
 
 class CounterHook(ProtoHook):
 
-    event_counter: Counter = Counter()
+    event_counter: t.Counter[str]
+
+    def __init__(self):
+        self.event_counter = Counter()
 
     def prehook(
-        self, event_name: str, args: Tuple[Any, ...], kwargs: Dict[str, Any]
+        self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
         self.event_counter[event_name] += 1
 

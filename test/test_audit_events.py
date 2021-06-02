@@ -1,7 +1,9 @@
 # Tests for raising Python audit events with sys.audit through Auditors
 
+import sys
 import unittest
 import warnings
+from collections import Counter, defaultdict
 from seagrass import Auditor
 
 
@@ -12,9 +14,6 @@ class SysAuditEventsTestCase(unittest.TestCase):
         self.auditor = Auditor()
 
     def test_wrap_function_and_create_sys_audit_event(self):
-        import sys
-        from collections import Counter, defaultdict
-
         @self.auditor.decorate("test.foo", raise_audit_event=True)
         def foo(x, y, z=None):
             return x + y + (0 if z is None else z)

@@ -12,8 +12,8 @@ class Auditor:
     """
 
     logger: logging.Logger
-    events: Dict[str, Event] = {}
-    event_wrappers: Dict[str, Callable] = {}
+    events: Dict[str, Event]
+    event_wrappers: Dict[str, Callable]
     __enabled: bool = False
 
     def __init__(self, logger: Union[str, logging.Logger] = "seagrass"):
@@ -22,6 +22,9 @@ class Auditor:
             self.logger = logger
         else:
             self.logger = logging.getLogger("seagrass")
+
+        self.events = dict()
+        self.event_wrappers = dict()
 
     def enable(self, mode: bool):
         """Enable or disable auditing."""
