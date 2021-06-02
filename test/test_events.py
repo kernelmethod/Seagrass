@@ -5,6 +5,42 @@ import unittest
 import warnings
 from collections import Counter, defaultdict
 from seagrass import Auditor
+from seagrass.hooks import CounterHook
+
+
+class EventsTestCase(unittest.TestCase):
+    """Tests for events created by Seagrass."""
+
+    def setUp(self):
+        self.auditor = Auditor()
+
+    def test_toggle_event(self):
+        hook = CounterHook()
+
+        @self.auditor.decorate("test.foo", hooks=[hook])
+        def foo():
+            return
+
+        @self.auditor.decorate("test.bar", hooks=[hook])
+        def bar():
+            return foo()
+
+        with self.auditor.audit():
+            bar()
+            self.assertEqual(hook.event_counter["test.foo"], 1)
+            self.assertEqual(hook.event_counter["test.bar"], 1)
+
+            # After disabling an event, its event hooks should no longer be called
+            self.auditor.toggle_event("test.foo", False)
+            bar()
+            self.assertEqual(hook.event_counter["test.foo"], 1)
+            self.assertEqual(hook.event_counter["test.bar"], 2)
+
+            # Now we re-enable the event so that hooks get called again
+            self.auditor.toggle_event("test.foo", True)
+            bar()
+            self.assertEqual(hook.event_counter["test.foo"], 2)
+            self.assertEqual(hook.event_counter["test.bar"], 3)
 
 
 class SysAuditEventsTestCase(unittest.TestCase):

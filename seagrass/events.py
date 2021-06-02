@@ -15,6 +15,7 @@ class Event:
     # number of events
     __slots__ = [
         "func",
+        "enabled",
         "name",
         "raise_audit_event",
         "hooks",
@@ -25,6 +26,7 @@ class Event:
     ]
 
     func: EventFnProtocol
+    enabled: bool
     name: str
     raise_audit_event: bool
     hooks: List[ProtoHook]
@@ -37,12 +39,14 @@ class Event:
         self,
         func: Callable,
         name: str,
+        enabled: bool = True,
         hooks: List[ProtoHook] = [],
         raise_audit_event: bool = False,
         prehook_audit_event_name: Optional[str] = None,
         posthook_audit_event_name: Optional[str] = None,
     ):
         self.func = func
+        self.enabled = enabled
         self.name = name
         self.raise_audit_event = raise_audit_event
         self.hooks = hooks
@@ -66,6 +70,10 @@ class Event:
         )
 
     def __call__(self, *args, **kwargs):
+        if not self.enabled:
+            # We just return the result of the wrapped function
+            return self.func(*args, **kwargs)
+
         if self.raise_audit_event:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 

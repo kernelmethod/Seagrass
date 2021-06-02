@@ -93,5 +93,6 @@ class Auditor:
 
         return wrapper
 
-    def unwrap(self, label: str):
-        """Stop auditing the event with the given label."""
+    def toggle_event(self, label: str, enabled: bool) -> None:
+        """Toggle whether or not an event is enabled."""
+        self.events[label].enabled = enabled
