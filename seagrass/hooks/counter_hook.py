@@ -1,11 +1,12 @@
 import logging
 import typing as t
 from collections import Counter
-from seagrass.base import ProtoHook, LoggableHook
 
 
-class CounterHook(ProtoHook, LoggableHook):
+class CounterHook:
 
+    prehook_priority: int = 0
+    posthook_priority: int = 0
     event_counter: t.Counter[str]
 
     def __init__(self):
@@ -15,6 +16,10 @@ class CounterHook(ProtoHook, LoggableHook):
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
         self.event_counter[event_name] += 1
+
+    def posthook(self, event_name: str, result: t.Any, context: None) -> None:
+        # Posthook does nothing
+        pass
 
     def reset(self):
         self.event_counter.clear()

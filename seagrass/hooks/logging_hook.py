@@ -1,15 +1,17 @@
 import logging
 import typing as t
 from seagrass import get_audit_logger
-from seagrass.base import ProtoHook
 
 log_input_t = str
 prehook_msg_t = t.Callable[[str, t.Tuple[t.Any, ...], t.Dict[str, t.Any]], log_input_t]
 posthook_msg_t = t.Callable[[str, t.Any], log_input_t]
 
 
-class LoggingHook(ProtoHook):
+class LoggingHook:
     """A hook that emits a new log whenever it gets called."""
+
+    prehook_priority: int = 0
+    posthook_priority: int = 0
 
     loglevel: int
     prehook_msg: t.Optional[prehook_msg_t]

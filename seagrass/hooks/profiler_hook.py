@@ -3,10 +3,9 @@ import logging
 import pstats
 import typing as t
 from io import StringIO
-from seagrass.base import LoggableHook, ProtoHook
 
 
-class ProfilerHook(ProtoHook, LoggableHook):
+class ProfilerHook:
 
     profiler: prof.Profile
     restrictions: t.Tuple[t.Any, ...]

@@ -1,7 +1,6 @@
 import inspect
 import typing as t
 from collections import Counter, defaultdict
-from seagrass.base import ProtoHook
 
 
 class TracedFrame(t.NamedTuple):
@@ -22,9 +21,12 @@ class TracedFrame(t.NamedTuple):
         return f"{self.filename}#{self.lineno}"
 
 
-class StackTraceHook(ProtoHook):
+class StackTraceHook:
     """An audit hook that captures the stack trace of where events are raised
     and collects statistics about caller locations."""
+
+    prehook_priority: int = 0
+    posthook_priority: int = 0
 
     stack_depth: t.Optional[int]
     stack_trace_counter: t.DefaultDict[str, t.Counter[t.Tuple[TracedFrame, ...]]]
@@ -49,6 +51,10 @@ class StackTraceHook(ProtoHook):
         finally:
             # See note in https://docs.python.org/3/library/inspect.html#the-interpreter-stack
             del current_stack
+
+    def posthook(self, event: str, result: t.Any, context: None) -> None:
+        # Posthook does nothing
+        pass
 
     def reset(self):
         self.stack_trace_counter.clear()
