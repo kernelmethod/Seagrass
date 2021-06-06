@@ -1,3 +1,4 @@
+import logging
 import typing as t
 
 # Type variable for contexts returned by prehooks
@@ -33,4 +34,17 @@ class ProtoHook(t.Protocol[C]):
 
     def reset(self) -> None:
         """Resets the internal state of the hook (if there is any)."""
+        ...
+
+
+@t.runtime_checkable
+class LoggableHook(t.Protocol):
+    """A mixin class for hooks that support an additional `log_results` method that
+    outputs the results of the hook."""
+
+    def log_results(
+        self,
+        logger: logging.Logger,
+    ) -> None:
+        """Log results that have been accumulated by the hook using the provided logger."""
         ...

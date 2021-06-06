@@ -1,12 +1,15 @@
 import cProfile as prof
+import logging
 import pstats
 import typing as t
-from seagrass.base import ProtoHook
+from io import StringIO
+from seagrass.base import LoggableHook, ProtoHook
 
 
-class ProfilerHook(ProtoHook):
+class ProfilerHook(ProtoHook, LoggableHook):
 
     profiler: prof.Profile
+    restrictions: t.Tuple[t.Any, ...]
 
     # Set a high prehook_priority and posthook_priority to ensure
     # that the profiler only gets called directly before and after
@@ -14,7 +17,9 @@ class ProfilerHook(ProtoHook):
     prehook_priority: int = 10
     posthook_priority: int = 10
 
-    def __init__(self):
+    def __init__(self, restrictions: t.Optional[t.Tuple[t.Any, ...]] = None):
+        restrictions = tuple() if restrictions is None else restrictions
+        self.restrictions = restrictions
         self.reset()
 
     def prehook(
@@ -34,3 +39,17 @@ class ProfilerHook(ProtoHook):
     def reset(self) -> None:
         """Reset the internal profiler."""
         self.profiler = prof.Profile()
+
+    def log_results(self, logger: logging.Logger):
+        """Log the results captured by ProfilerHook."""
+        # Dump results to an in-memory stream
+        output = StringIO()
+        stats = self.get_stats(stream=output)
+        stats.print_stats(*self.restrictions)
+
+        # Now take results from the in-memory stream and log them using the provided logger.
+        logger.info("Results from %s:", self.__class__.__name__)
+        logger.info("")
+        output.seek(0)
+        for line in output.readlines():
+            logger.info("    " + line.rstrip())

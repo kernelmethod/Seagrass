@@ -2,6 +2,7 @@ import functools
 import logging
 import typing as t
 from contextlib import contextmanager
+from seagrass.base import LoggableHook, ProtoHook
 from seagrass.events import Event
 
 # Global variable that keeps track of the auditor's logger for the
@@ -25,6 +26,7 @@ class Auditor:
     logger: logging.Logger
     events: t.Dict[str, Event]
     event_wrappers: t.Dict[str, t.Callable]
+    hooks: t.Set[ProtoHook]
     __enabled: bool = False
 
     def __init__(self, logger: t.Union[str, logging.Logger] = "seagrass"):
@@ -36,6 +38,7 @@ class Auditor:
 
         self.events = dict()
         self.event_wrappers = dict()
+        self.hooks = set()
 
     def toggle_auditing(self, mode: bool):
         """Enable or disable auditing."""
@@ -60,6 +63,7 @@ class Auditor:
         self,
         func: t.Callable,
         label: str,
+        hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
     ) -> t.Callable:
         """Wrap a function with a new auditing event."""
@@ -69,7 +73,13 @@ class Auditor:
                 f"An event with the label {label!r} has already been defined"
             )
 
-        new_event = Event(func, label, **kwargs)
+        hooks = [] if hooks is None else hooks
+
+        # Add hooks to the Auditor's `hooks` set
+        for hook in hooks:
+            self.hooks.add(hook)
+
+        new_event = Event(func, label, hooks=hooks, **kwargs)
         self.events[label] = new_event
 
         @functools.wraps(func)
@@ -96,3 +106,9 @@ class Auditor:
     def toggle_event(self, label: str, enabled: bool) -> None:
         """Toggle whether or not an event is enabled."""
         self.events[label].enabled = enabled
+
+    def log_results(self):
+        """Log results stored by hooks by calling `log_results` on all LoggableHooks."""
+        for hook in self.hooks:
+            if isinstance(hook, LoggableHook):
+                hook.log_results(self.logger)
