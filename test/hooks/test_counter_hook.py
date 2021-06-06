@@ -11,7 +11,7 @@ class CounterHookTestCase(unittest.TestCase):
         hook = CounterHook()
 
         @auditor.decorate("test.say_hello", hooks=[hook])
-        def say_hello(name: str):
+        def say_hello(name: str) -> str:
             return f"Hello, {name}!"
 
         self.assertEqual(hook.event_counter["test.say_hello"], 0)

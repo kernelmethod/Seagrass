@@ -1,6 +1,8 @@
 # Tests for Auditor creation and basic functionality
 
+import logging
 import unittest
+from io import StringIO
 from seagrass import Auditor
 
 
@@ -8,9 +10,6 @@ class CreateAuditorTestCase(unittest.TestCase):
     """Tests for creating a new Auditor instance."""
 
     def test_create_auditor_with_logger(self):
-        import logging
-        from io import StringIO
-
         # Create a new Auditor with a custom logger
         self.logging_output = StringIO()
 
@@ -31,6 +30,21 @@ class CreateAuditorTestCase(unittest.TestCase):
         self.logging_output.seek(0)
         lines = self.logging_output.readlines()
         self.assertEqual(lines, ["Hello, world!\n"])
+
+    def test_define_two_events_with_the_same_name(self):
+        # If we try to create two auditing events with the same name, we should
+        # get an error.
+        auditor = Auditor()
+
+        @auditor.decorate("test.foo")
+        def foo_1():
+            return
+
+        with self.assertRaises(ValueError):
+
+            @auditor.decorate("test.foo")
+            def foo_2():
+                return
 
 
 if __name__ == "__main__":

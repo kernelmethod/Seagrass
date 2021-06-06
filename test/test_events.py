@@ -14,6 +14,62 @@ class EventsTestCase(unittest.TestCase):
     def setUp(self):
         self.auditor = Auditor()
 
+    def test_wrap_class_property(self):
+        # Override a class property to call a hook whenever it's accessed
+        class Foo:
+            def __init__(self):
+                self.x = 0
+
+            def add_one(self):
+                return self.x + 1
+
+        hook = CounterHook()
+
+        @self.auditor.decorate("test.foo.get_x", hooks=[hook])
+        def get_x(self):
+            return self.__x
+
+        @self.auditor.decorate("test.foo.set_x", hooks=[hook])
+        def set_x(self, val):
+            self.__x = val
+
+        @self.auditor.decorate("test.foo.del_x", hooks=[hook])
+        def del_x(self):
+            del self.__x
+
+        setattr(Foo, "x", property(fget=get_x, fset=set_x, fdel=del_x))
+
+        with self.auditor.audit():
+            f = Foo()
+            f.x = 1
+            y = f.x  # noqa: F841
+            f.x += 2
+            del f.x
+
+        # We call get_x twice (once for y = f.x, another for f.x += 2)
+        # We call set_x three times (once during Foo.__init__, once during f.x = 1, and
+        #   once during f.x += 2)
+        # We call del_x once (when we call del f.x)
+        self.assertEqual(hook.event_counter["test.foo.get_x"], 2)
+        self.assertEqual(hook.event_counter["test.foo.set_x"], 3)
+        self.assertEqual(hook.event_counter["test.foo.del_x"], 1)
+
+        # Now override the add_one function belonging to Foo
+        current_add_one = Foo.add_one
+
+        @self.auditor.decorate("test.foo.add_one", hooks=[hook])
+        def add_one(self, *args, **kwargs):
+            return current_add_one(self, *args, **kwargs)
+
+        setattr(Foo, "add_one", add_one)
+
+        with self.auditor.audit():
+            f = Foo()
+            result = f.add_one()
+
+        self.assertEqual(result, 1)
+        self.assertEqual(hook.event_counter["test.foo.add_one"], 1)
+
     def test_toggle_event(self):
         hook = CounterHook()
 
@@ -42,14 +98,8 @@ class EventsTestCase(unittest.TestCase):
             self.assertEqual(hook.event_counter["test.foo"], 2)
             self.assertEqual(hook.event_counter["test.bar"], 3)
 
-
-class SysAuditEventsTestCase(unittest.TestCase):
-    """We should be able to set up sys.audit events when we wrap functions."""
-
-    def setUp(self):
-        self.auditor = Auditor()
-
     def test_wrap_function_and_create_sys_audit_event(self):
+        # We should be able to set up sys.audit events when we wrap functions
         @self.auditor.decorate("test.foo", raise_audit_event=True)
         def foo(x, y, z=None):
             return x + y + (0 if z is None else z)
