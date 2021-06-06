@@ -37,7 +37,7 @@ class Auditor:
         self.events = dict()
         self.event_wrappers = dict()
 
-    def enable(self, mode: bool):
+    def toggle_auditing(self, mode: bool):
         """Enable or disable auditing."""
         self.__enabled = mode
 
@@ -49,11 +49,11 @@ class Auditor:
     def audit(self):
         """Create a new context within which the auditor is enabled."""
         try:
-            self.enable(True)
+            self.toggle_auditing(True)
             _audit_logger_stack.append(self.logger)
             yield None
         finally:
-            self.enable(False)
+            self.toggle_auditing(False)
             _audit_logger_stack.pop()
 
     def wrap(
