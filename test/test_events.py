@@ -100,17 +100,17 @@ class EventsTestCase(unittest.TestCase):
 
     def test_wrap_function_and_create_sys_audit_event(self):
         # We should be able to set up sys.audit events when we wrap functions
-        @self.auditor.decorate("test.foo", raise_audit_event=True)
+        @self.auditor.decorate("test.foo", raise_runtime_events=True)
         def foo(x, y, z=None):
             return x + y + (0 if z is None else z)
 
-        @self.auditor.decorate("test.bar", raise_audit_event=False)
+        @self.auditor.decorate("test.bar", raise_runtime_events=False)
         def bar(x, y, z=None):
             return x + y + (0 if z is None else z)
 
         @self.auditor.decorate(
             "test.baz",
-            raise_audit_event=True,
+            raise_runtime_events=True,
             prehook_audit_event_name="baz_prehook",
             posthook_audit_event_name="baz_posthook",
         )

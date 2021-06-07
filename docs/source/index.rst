@@ -21,6 +21,9 @@ browse the table of contents for the information you're looking for.
 
    quickstart
    custom_hooks
+   tips_and_tricks
+   faq
+   glossary
    api/index
 
 Indices and tables

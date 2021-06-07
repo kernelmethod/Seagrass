@@ -16,7 +16,7 @@ class Event:
         "func",
         "enabled",
         "name",
-        "raise_audit_event",
+        "raise_runtime_events",
         "hooks",
         "prehook_audit_event_name",
         "posthook_audit_event_name",
@@ -26,7 +26,7 @@ class Event:
 
     enabled: bool
     name: str
-    raise_audit_event: bool
+    raise_runtime_events: bool
     hooks: t.List[ProtoHook]
     prehook_audit_event_name: str
     posthook_audit_event_name: str
@@ -39,7 +39,7 @@ class Event:
         name: str,
         enabled: bool = True,
         hooks: t.List[ProtoHook] = [],
-        raise_audit_event: bool = False,
+        raise_runtime_events: bool = False,
         prehook_audit_event_name: t.Optional[str] = None,
         posthook_audit_event_name: t.Optional[str] = None,
     ):
@@ -50,16 +50,16 @@ class Event:
         :param bool enabled: whether to enable the event.
         :param List[ProtoHook] hooks: a list of all of the hooks that should be called whenever
             the event is triggered.
-        :param bool raise_audit_event: if ``True``, two `Python runtime audit events`_ are raised
+        :param bool raise_runtime_events: if ``True``, two `Python runtime audit events`_ are raised
             using `sys.audit`_ before and after running the function wrapped by the event.
         :param Optional[str] prehook_audit_event_name: the name of the runtime audit event
             that should be raised *before* calling the wrapped function. If set to ``None``,
             the audit event is automatically named ``f"prehook:{name}"``. This parameter is
-            ignored if ``raise_audit_event`` is ``False``.
+            ignored if ``raise_runtime_events`` is ``False``.
         :param Optional[str] posthook_audit_event_name: the name of the runtime audit event
             that should be raised *after* calling the wrapped function. If set to ``None``,
             the audit event is automatically named ``f"posthook:{name}"``. This parameter is
-            ignored if ``raise_audit_event`` is ``False``.
+            ignored if ``raise_runtime_events`` is ``False``.
 
         .. _Python runtime audit events: https://www.python.org/dev/peps/pep-0578/
         .. _sys.audit: https://docs.python.org/3/library/sys.html#sys.audit
@@ -67,7 +67,7 @@ class Event:
         self.func: event_func_t = func
         self.enabled = enabled
         self.name = name
-        self.raise_audit_event = raise_audit_event
+        self.raise_runtime_events = raise_runtime_events
         self.hooks = hooks
 
         if prehook_audit_event_name is None:
@@ -99,7 +99,7 @@ class Event:
             # We just return the result of the wrapped function
             return self.func(*args, **kwargs)
 
-        if self.raise_audit_event:
+        if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
         prehook_contexts = {}
@@ -114,7 +114,7 @@ class Event:
             hook = self.hooks[hook_num]
             hook.posthook(self.name, result, prehook_contexts[hook_num])
 
-        if self.raise_audit_event:
+        if self.raise_runtime_events:
             sys.audit(self.posthook_audit_event_name, result)
 
         return result
