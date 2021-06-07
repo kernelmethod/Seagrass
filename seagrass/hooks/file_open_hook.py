@@ -22,25 +22,37 @@ class FileOpenHook:
     posthook_priority: int = 3
 
     file_open_counter: t.DefaultDict[str, t.Counter[FileOpenInfo]]
+    track_nested_opens: bool
     __enabled: bool = False
-    __current_event: t.Optional[str] = None
+    __current_event_stack: t.List[str]
 
-    def __init__(self):
+    def __init__(self, track_nested_opens: bool = False):
         self.file_open_counter = defaultdict(t.Counter[FileOpenInfo])
+        self.track_nested_opens = track_nested_opens
+        self.__current_event_stack = []
 
         # Add the __sys_audit_hook closure as a new audit hook
         sys.addaudithook(self.__sys_audit_hook)
 
-    def __sys_audit_hook(self, event, *args):
+    def __sys_audit_hook(self, event, args):
         try:
             if self.__enabled and event == "open":
                 assert (
-                    self.__current_event is not None
-                ), "__current_event attribute has not been set"
-                filename, mode, flags = args[0]
+                    len(self.__current_event_stack) > 0
+                ), f"{self.__class__.__name__}'s current event stack is empty!"
 
+                filename, mode, flags = args
                 info = FileOpenInfo(filename, mode, flags)
-                self.file_open_counter[self.__current_event][info] += 1
+
+                # When track_nested_opens is set, we increment the number of opens
+                # for every (unique) event in the __current_event_stack. Otherwise,
+                # we only count it for the most recent event.
+                if self.track_nested_opens:
+                    for event in set(self.__current_event_stack):
+                        self.file_open_counter[event][info] += 1
+                else:
+                    event = self.__current_event_stack[-1]
+                    self.file_open_counter[event][info] += 1
 
         except Exception as ex:
             # In theory we shouldn't reach this point, but if we don't include
@@ -53,9 +65,9 @@ class FileOpenHook:
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
-        # Set __enabled so that we can enter the both of __sys_audit_hook
+        # Set __enabled so that we can enter the body of __sys_audit_hook
         self.__enabled = True
-        self.__current_event = event_name
+        self.__current_event_stack.append(event_name)
 
     def posthook(
         self,
@@ -64,7 +76,7 @@ class FileOpenHook:
         context: None,
     ) -> None:
         self.__enabled = False
-        self.__current_event = None
+        self.__current_event_stack.pop()
 
     def reset(self) -> None:
         self.file_open_counter.clear()
