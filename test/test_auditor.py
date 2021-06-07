@@ -4,6 +4,7 @@ import logging
 import unittest
 from io import StringIO
 from seagrass import Auditor
+from test.base import SeagrassTestCaseBase
 
 
 class CreateAuditorTestCase(unittest.TestCase):
@@ -31,18 +32,26 @@ class CreateAuditorTestCase(unittest.TestCase):
         lines = self.logging_output.readlines()
         self.assertEqual(lines, ["Hello, world!\n"])
 
-    def test_define_two_events_with_the_same_name(self):
-        # If we try to create two auditing events with the same name, we should
-        # get an error.
-        auditor = Auditor()
 
-        @auditor.decorate("test.foo")
+class SimpleAuditorFunctionsTestCase(SeagrassTestCaseBase):
+    def test_define_new_event(self):
+        # Define a new event and ensure that it gets added to the auditor's events
+        # dictionary and event_wrapper dictionary
+        @self.auditor.decorate("test.foo")
+        def foo():
+            return
+
+        self.assertIn("test.foo", self.auditor.events)
+        self.assertIn("test.foo", self.auditor.event_wrappers)
+
+    def test_define_two_events_with_the_same_name(self):
+        @self.auditor.decorate("test.foo")
         def foo_1():
             return
 
         with self.assertRaises(ValueError):
 
-            @auditor.decorate("test.foo")
+            @self.auditor.decorate("test.foo")
             def foo_2():
                 return
 
