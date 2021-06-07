@@ -11,7 +11,7 @@ class ProfilerHookTestCase(unittest.TestCase):
         # Test only works for Python >= 3.9 due to the use of StatsProfile
         try:
             from pstats import StatsProfile  # noqa: F401
-        except AttributeError:
+        except ImportError:
             self.skipTest("Test disabled for Python < 3.9")
 
         auditor = Auditor()
