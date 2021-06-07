@@ -89,6 +89,7 @@ class Auditor:
             else:
                 return new_event(*args, **kwargs)
 
+        self.event_wrappers[label] = wrapper
         return wrapper
 
     def decorate(
