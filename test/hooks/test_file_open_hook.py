@@ -56,35 +56,60 @@ class FileOpenHookTestCase(HookTestCaseBase):
                 return f.readlines()
 
         @self.auditor.decorate("test.tabify", hooks=[self.hook])
-        def tabify(filename):
-            return ["\t" + line for line in readlines(filename)]
+        def tabify(filename, outfile):
+            lines = readlines(filename)
+            with open(outfile, "w") as f:
+                for line in lines:
+                    f.write("\t" + line)
 
-        with tempfile.NamedTemporaryFile() as f:
-            with self.auditor.audit():
-                with open(f.name, "w") as f:
-                    f.write("hello\nworld!")
-                tabify(f.name)
+        with tempfile.NamedTemporaryFile() as tf1:
+            with tempfile.NamedTemporaryFile() as tf2:
+                with self.auditor.audit():
+                    with open(tf1.name, "w") as f:
+                        f.write("hello\nworld!")
+                    tabify(tf1.name, tf2.name)
 
-            self.assertEqual(
-                sorted(self.hook.file_open_counter.keys()),
-                ["test.readlines", "test.tabify"],
-            )
+                self.assertEqual(
+                    sorted(self.hook.file_open_counter.keys()),
+                    ["test.readlines", "test.tabify"],
+                )
 
-            readlines_keys = list(self.hook.file_open_counter["test.readlines"].keys())
-            tabify_keys = list(self.hook.file_open_counter["test.tabify"].keys())
+                readlines_keys = list(
+                    self.hook.file_open_counter["test.readlines"].keys()
+                )
+                tabify_keys = list(self.hook.file_open_counter["test.tabify"].keys())
 
-            # Only opened one file in our events, and only for reading
-            self.assertEqual(len(readlines_keys), 1)
-            self.assertEqual(len(tabify_keys), 1)
-            self.assertEqual(readlines_keys[0], tabify_keys[0])
+                # Opened one file for reading in readlines
+                # Opened one file for writing in tabify, and since the hook was created
+                # with track_nested_opens=True, we also count the file that was read by
+                # readlines.
+                self.assertEqual(len(readlines_keys), 1)
+                self.assertEqual(len(tabify_keys), 2)
 
-            open_info = readlines_keys[0]
-            self.assertEqual(open_info.filename, f.name)
-            self.assertEqual(open_info.mode, "r")
-            self.assertEqual(
-                self.hook.file_open_counter["test.readlines"][open_info], 1
-            )
-            self.assertEqual(self.hook.file_open_counter["test.tabify"][open_info], 1)
+                # Check statistics about the file that was read
+                read_info = readlines_keys[0]
+                self.assertIn(readlines_keys[0], tabify_keys)
+
+                self.assertEqual(read_info.filename, tf1.name)
+                self.assertEqual(read_info.mode, "r")
+                self.assertEqual(
+                    self.hook.file_open_counter["test.readlines"][read_info], 1
+                )
+                self.assertEqual(
+                    self.hook.file_open_counter["test.tabify"][read_info], 1
+                )
+
+                # Check statistics about the file that was written to
+                info1, info2 = tabify_keys
+                write_info = info1 if info2 == read_info else info2
+                self.assertEqual(write_info.filename, tf2.name)
+                self.assertEqual(write_info.mode, "w")
+                self.assertEqual(
+                    self.hook.file_open_counter["test.readlines"][write_info], 0
+                )
+                self.assertEqual(
+                    self.hook.file_open_counter["test.tabify"][write_info], 1
+                )
 
 
 if __name__ == "__main__":

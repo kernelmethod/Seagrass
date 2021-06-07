@@ -23,7 +23,6 @@ class FileOpenHook:
 
     file_open_counter: t.DefaultDict[str, t.Counter[FileOpenInfo]]
     track_nested_opens: bool
-    __enabled: bool = False
     __current_event_stack: t.List[str]
 
     def __init__(self, track_nested_opens: bool = False):
@@ -36,11 +35,7 @@ class FileOpenHook:
 
     def __sys_audit_hook(self, event, args):
         try:
-            if self.__enabled and event == "open":
-                assert (
-                    len(self.__current_event_stack) > 0
-                ), f"{self.__class__.__name__}'s current event stack is empty!"
-
+            if len(self.__current_event_stack) > 0 and event == "open":
                 filename, mode, flags = args
                 info = FileOpenInfo(filename, mode, flags)
 
@@ -65,8 +60,6 @@ class FileOpenHook:
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
-        # Set __enabled so that we can enter the body of __sys_audit_hook
-        self.__enabled = True
         self.__current_event_stack.append(event_name)
 
     def posthook(
@@ -75,7 +68,6 @@ class FileOpenHook:
         result: t.Any,
         context: None,
     ) -> None:
-        self.__enabled = False
         self.__current_event_stack.pop()
 
     def reset(self) -> None:
