@@ -1,4 +1,4 @@
-name: CI
+name: build
 on:
   push:
     branches:
@@ -39,3 +39,6 @@ jobs:
       - name: Run unit tests
         run: |
           pytest
+      - name: Run doctests
+        run: |
+          sphinx-build -b doctest ./docs/source/ ./docs/build/
