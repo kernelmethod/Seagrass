@@ -1,15 +1,22 @@
 name: Package tests
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - main
+    tags: '*'
+  pull_request:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9]
-
+        os:
+          - ubuntu-latest
+        arch:
+          - x64
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
