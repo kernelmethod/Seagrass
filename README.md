@@ -1,5 +1,9 @@
 # Seagrass
 
+[![PyPI package version](https://img.shields.io/pypi/v/seagrass.svg)](https://pypi.org/project/seagrass)
+[![Python versions](https://img.shields.io/pypi/pyversions/seagrass.svg)](https://pypi.org/project/seagrass)
+![Build status](https://github.com/kernelmethod/Seagrass/actions/workflows/CI.yml/badge.svg?branch=main)
+
 *A Python event auditing and profiling multitool*
 
 Seagrass is a Python library for hooking and auditing events in your Python
