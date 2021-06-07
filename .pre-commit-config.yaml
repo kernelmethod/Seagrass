@@ -15,3 +15,4 @@ repos:
     rev: 'v0.812' # https://github.com/python/mypy/tags
     hooks:
       - id: mypy
+        exclude: docs/
