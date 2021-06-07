@@ -21,7 +21,7 @@ browse the table of contents for the information you're looking for.
 
    quickstart
    custom_hooks
-   documentation/index
+   api/index
 
 Indices and tables
 ==================

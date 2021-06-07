@@ -1,15 +1,14 @@
 import sys
+import typing as t
 from seagrass.base import ProtoHook
-from typing import Any, Callable, List, Optional, Protocol
 
-
-class EventFnProtocol(Protocol):
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        pass
+event_func_t = t.Callable[..., t.Any]
 
 
 class Event:
-    """A wrapped function that is under audit."""
+    """Defines an event that is under audit. The event wraps around a function; instead of calling
+    the function, we call the event, which first triggers any prehooks, *then* calls the function,
+    and then triggers posthooks."""
 
     # Use __slots__ since feasibly users may want to create a large
     # number of events
@@ -25,27 +24,47 @@ class Event:
         "__posthook_execution_order",
     ]
 
-    func: EventFnProtocol
     enabled: bool
     name: str
     raise_audit_event: bool
-    hooks: List[ProtoHook]
+    hooks: t.List[ProtoHook]
     prehook_audit_event_name: str
     posthook_audit_event_name: str
-    __prehook_execution_order: List[int]
-    __posthook_execution_order: List[int]
+    __prehook_execution_order: t.List[int]
+    __posthook_execution_order: t.List[int]
 
     def __init__(
         self,
-        func: Callable,
+        func: event_func_t,
         name: str,
         enabled: bool = True,
-        hooks: List[ProtoHook] = [],
+        hooks: t.List[ProtoHook] = [],
         raise_audit_event: bool = False,
-        prehook_audit_event_name: Optional[str] = None,
-        posthook_audit_event_name: Optional[str] = None,
+        prehook_audit_event_name: t.Optional[str] = None,
+        posthook_audit_event_name: t.Optional[str] = None,
     ):
-        self.func = func
+        """Create a new Event.
+
+        :param Callable[[...],Any] func: the function being wrapped by this event.
+        :param str name: the name of the event.
+        :param bool enabled: whether to enable the event.
+        :param List[ProtoHook] hooks: a list of all of the hooks that should be called whenever
+            the event is triggered.
+        :param bool raise_audit_event: if ``True``, two `Python runtime audit events`_ are raised
+            using `sys.audit`_ before and after running the function wrapped by the event.
+        :param Optional[str] prehook_audit_event_name: the name of the runtime audit event
+            that should be raised *before* calling the wrapped function. If set to ``None``,
+            the audit event is automatically named ``f"prehook:{name}"``. This parameter is
+            ignored if ``raise_audit_event`` is ``False``.
+        :param Optional[str] posthook_audit_event_name: the name of the runtime audit event
+            that should be raised *after* calling the wrapped function. If set to ``None``,
+            the audit event is automatically named ``f"posthook:{name}"``. This parameter is
+            ignored if ``raise_audit_event`` is ``False``.
+
+        .. _Python runtime audit events: https://www.python.org/dev/peps/pep-0578/
+        .. _sys.audit: https://docs.python.org/3/library/sys.html#sys.audit
+        """
+        self.func: event_func_t = func
         self.enabled = enabled
         self.name = name
         self.raise_audit_event = raise_audit_event
@@ -70,6 +89,12 @@ class Event:
         )
 
     def __call__(self, *args, **kwargs):
+        """Call the function wrapped by the Event. If the event is enabled, its prehooks and
+        posthooks are executed before and after the execution of the wrapped function.
+
+        :param args: the arguments to pass to the wrapped function.
+        :param kwargs: the keyword arguments to pass to the wrapped function.
+        """
         if not self.enabled:
             # We just return the result of the wrapped function
             return self.func(*args, **kwargs)

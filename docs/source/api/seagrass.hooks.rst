@@ -6,3 +6,4 @@
 
 .. automodule:: seagrass.hooks
    :members:
+   :show-inheritance:

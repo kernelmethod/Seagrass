@@ -6,3 +6,4 @@
 
 .. automodule:: seagrass.base
    :members:
+   :show-inheritance:
