@@ -20,20 +20,30 @@ class FileOpenHookTestCase(HookTestCaseBase):
                 return f.read()
 
         with tempfile.NamedTemporaryFile() as f:
+            # Even though we're using sys.audit hooks, calls to say_hello should not
+            # trigger the audit hook unless we're in an auditing context.
+            say_hello(f.name, "Alice")
             with self.auditor.audit():
                 result = say_hello(f.name, "Alice")
+            say_hello(f.name, "Alice")
 
             self.assertEqual(result, "Hello, Alice!\n")
-            self.assertEqual(self.hook.file_open_counter[f"{f.name} (mode='w')"], 1)
-            self.assertEqual(self.hook.file_open_counter[f"{f.name} (mode='r')"], 1)
+
+            keys = list(self.hook.file_open_counter["test.say_hello"].keys())
+            keys.sort(key=lambda info: info.mode)
+            self.assertEqual(keys[0].filename, f.name)
+            self.assertEqual(keys[0].mode, "r")
+            self.assertEqual(keys[1].filename, f.name)
+            self.assertEqual(keys[1].mode, "w")
 
             # Check the logging output
             self.auditor.log_results()
             self.logging_output.seek(0)
             lines = [line.rstrip() for line in self.logging_output.readlines()]
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(lines[1], f"(INFO)     {f.name} (mode='w'): 1")
-            self.assertEqual(lines[2], f"(INFO)     {f.name} (mode='r'): 1")
+
+            # Header line + one line for one event + two lines for one read of the temporary
+            # file, one write to it
+            self.assertEqual(len(lines), 4)
 
 
 if __name__ == "__main__":

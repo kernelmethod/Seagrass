@@ -2,6 +2,13 @@ import logging
 import sys
 import typing as t
 import warnings
+from collections import defaultdict
+
+
+class FileOpenInfo(t.NamedTuple):
+    filename: str
+    mode: str
+    flags: int
 
 
 class FileOpenHook:
@@ -14,19 +21,12 @@ class FileOpenHook:
     prehook_priority: int = 3
     posthook_priority: int = 3
 
-    # Boolean variables that indicate whether we should track the
-    # mode that files were opened with, and whether we should track
-    # the flags those files were opened with.
-    track_mode: bool
-    track_flags: bool
-
-    file_open_counter: t.Counter[str]
+    file_open_counter: t.DefaultDict[str, t.Counter[FileOpenInfo]]
     __enabled: bool = False
+    __current_event: t.Optional[str] = None
 
-    def __init__(self, track_mode: bool = True, track_flags: bool = False):
-        self.file_open_counter = t.Counter[str]()
-        self.track_mode = track_mode
-        self.track_flags = track_flags
+    def __init__(self):
+        self.file_open_counter = defaultdict(t.Counter[FileOpenInfo])
 
         # Add the __sys_audit_hook closure as a new audit hook
         sys.addaudithook(self.__sys_audit_hook)
@@ -34,16 +34,13 @@ class FileOpenHook:
     def __sys_audit_hook(self, event, *args):
         try:
             if self.__enabled and event == "open":
+                assert (
+                    self.__current_event is not None
+                ), "__current_event attribute has not been set"
                 filename, mode, flags = args[0]
 
-                # Create a key for the file_open_counter that we will increment
-                key = filename
-                if self.track_mode:
-                    key += f" (mode='{mode}')"
-                if self.track_flags:
-                    key += f" (flags='{hex(flags)}')"
-
-                self.file_open_counter[key] += 1
+                info = FileOpenInfo(filename, mode, flags)
+                self.file_open_counter[self.__current_event][info] += 1
 
         except Exception as ex:
             # In theory we shouldn't reach this point, but if we don't include
@@ -58,6 +55,7 @@ class FileOpenHook:
     ) -> None:
         # Set __enabled so that we can enter the both of __sys_audit_hook
         self.__enabled = True
+        self.__current_event = event_name
 
     def posthook(
         self,
@@ -66,11 +64,20 @@ class FileOpenHook:
         context: None,
     ) -> None:
         self.__enabled = False
+        self.__current_event = None
 
     def reset(self) -> None:
         self.file_open_counter.clear()
 
     def log_results(self, logger: logging.Logger) -> None:
         logger.info("%s results (file opened, count):", self.__class__.__name__)
-        for (key, count) in self.file_open_counter.items():
-            logger.info("    %s: %d", key, count)
+        for (event, counter) in self.file_open_counter.items():
+            logger.info("  event %s:", event)
+            for (info, count) in counter.items():
+                logger.info(
+                    "    %s (mode=%s, flags=%s): opened %d times",
+                    info.filename,
+                    info.mode,
+                    hex(info.flags),
+                    count,
+                )
