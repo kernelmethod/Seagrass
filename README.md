@@ -85,17 +85,21 @@ to the function `say_hello` has the wrong type.
 
 ```python
 from seagrass import Auditor
-from seagrass.base import ProtoHook
 
 auditor = Auditor()
 
-class MyTypeCheckHook(ProtoHook):
+class MyTypeCheckHook:
+
+    prehook_priority: int = 0
+    posthook_priority: int = 0
 
     def prehook(self, event_name, args, kwargs):
         assert isinstance(args[0], str)
 
-    def posthook(self, *args):
-        # Do nothing
+    def posthook(self, event_name, result, context):
+        pass
+
+    def reset(self):
         pass
 
 hook = MyTypeCheckHook()
