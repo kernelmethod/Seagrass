@@ -100,12 +100,34 @@ are opened during an event.
 .. _PEP 578: https://www.python.org/dev/peps/pep-0578/
 .. _Bypassing Python3.8 Audit Hooks: https://daddycocoaman.dev/posts/bypassing-python38-audit-hooks-part-1/
 
---------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When are runtime audit hooks better than Seagrass?
---------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Security:** if you're trying to audit a suspicious snippet of Python code,
   runtime audit hooks have the benefit that once they've been loaded with
   ``sys.addaudithook``, it's impossible (in theory) to remove them. Seagrass
   audit hooks don't come with the same guarantee.
 
+- **Simplicity:** in some cases, it might just be easier to use runtime audit
+  hooks, especially if you're trying to audit Python's `built-in audit events`_.
+  For instance, if all you want to do is print which files are opened using
+  ``open()`` within your code, you could do something like
+
+  .. code:: python
+
+     >>> from tempfile import NamedTemporaryFile
+
+     >>> def file_open_hook(event, args):
+     ...    if event == "open":
+     ...        filename, mode, flags = args
+     ...        print(f"{filename} opened with {mode=}, {flags=}")
+
+     >>> sys.addaudithook(file_open_hook)
+
+     >>> with open("/tmp/test.txt", "w") as f:
+     ...     f.write("Hello, world!\n")
+     /tmp/test.txt opened with mode='w', flags=524865
+
+
+.. _built-in audit events: https://docs.python.org/3/library/audit_events.html
