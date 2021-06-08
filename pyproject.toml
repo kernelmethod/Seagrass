@@ -4,3 +4,11 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.black]
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+disallow_untyped_calls = true
+ignore_missing_imports = true
