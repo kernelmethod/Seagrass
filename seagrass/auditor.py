@@ -3,6 +3,7 @@ import logging
 import typing as t
 from contextlib import contextmanager
 from seagrass.base import LoggableHook, ProtoHook
+from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
 
 # Global variable that keeps track of the auditor's logger for the
@@ -10,11 +11,9 @@ from seagrass.events import Event
 _audit_logger_stack: t.List[logging.Logger] = []
 
 
-def get_audit_logger() -> t.Optional[logging.Logger]:
-    if len(_audit_logger_stack) == 0:
-        return None
-    else:
-        return _audit_logger_stack[-1]
+def _empty_event_func(*args, **kwargs):
+    """A function used to define empty events. This function can take an arbitrary combination
+    of parameters, but internally it does nothing."""
 
 
 class Auditor:
@@ -176,6 +175,59 @@ class Auditor:
 
         return wrapper
 
+    def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:
+        """Create a new "empty" event. When this event is executed, it runs any hooks that are
+        associated with the event, but the function wrapped by the event itself does nothing.
+
+        :param str event_name: the name of the event that should be created. Event names should
+            be unique.
+        :param kwargs: keyword arguments. The keyword arguments for this function are the same
+            as those for :py:meth:`wrap`.
+        :return: returns a wrapper function around the event that was created.
+        :rtype: Callable[..., None]
+
+        **Example:**
+
+        .. doctest::
+
+            >>> from seagrass import Auditor
+
+            >>> from seagrass.hooks import CounterHook
+
+            >>> auditor = Auditor()
+
+            >>> hook = CounterHook()
+
+            >>> wrapper = auditor.create_event("my_signal", hooks=[hook])
+
+            >>> hook.event_counter["my_signal"]
+            0
+
+            >>> with auditor.audit():
+            ...     auditor.raise_event("my_signal")
+
+            >>> hook.event_counter["my_signal"]
+            1
+        """
+        return self.wrap(_empty_event_func, event_name, **kwargs)
+
+    def raise_event(self, event_name: str, *args, **kwargs) -> t.Any:
+        """Trigger an audit event using the input arguments and keyword arguments.
+
+        :param str event_name: the name of the event to be raised.
+        :param args: arguments to pass to the event.
+        :param kwargs: keyword arguments to pass to the event.
+        :return: returns the output of the event that was called.
+        :rtype: Any
+        :raises seagrass.errors.EventNotFoundError: if the auditor can't find the event with the
+            provided name.
+        """
+
+        if (wrapper := self.event_wrappers.get(event_name)) is not None:
+            return wrapper(*args, **kwargs)
+        else:
+            raise EventNotFoundError(event_name)
+
     def toggle_event(self, event_name: str, enabled: bool):
         """Enables or disables an auditing event.
 
@@ -221,3 +273,20 @@ class Auditor:
         for hook in self.hooks:
             if isinstance(hook, LoggableHook):
                 hook.log_results(self.logger)
+
+
+def get_audit_logger() -> t.Optional[logging.Logger]:
+    """Get the logger belonging to the auditor in the current auditing context. If this function
+    is executed outside of an auditing context, it returns ``None``.
+
+    This function only works in auditing contexts created by :py:meth:`Auditor.audit`; it will
+    be unable to get the logger for the current auditing context if you use
+    :py:meth:`Auditor.toggle_auditing`.
+
+    :return: the logger for the most recent auditing context (or ``None``).
+    :rtype: Optional[logging.Logger]
+    """
+    if len(_audit_logger_stack) == 0:
+        return None
+    else:
+        return _audit_logger_stack[-1]

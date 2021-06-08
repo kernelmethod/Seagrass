@@ -7,5 +7,6 @@ API documentation
 
    seagrass
    seagrass.base
+   seagrass.errors
    seagrass.events
    seagrass.hooks
