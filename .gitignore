@@ -1,6 +1,7 @@
 *__pycache__
 *.mypy_cache
 *.pyc
+*.eggs
 *.egg-info
 
 *venv
@@ -18,3 +19,4 @@ doc/build
 htmlcov/
 *.pytest_cache
 *,cover
+.tox
