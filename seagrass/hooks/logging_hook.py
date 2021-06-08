@@ -10,9 +10,6 @@ posthook_msg_t = t.Callable[[str, t.Any], log_input_t]
 class LoggingHook:
     """A hook that emits a new log whenever it gets called."""
 
-    prehook_priority: int = 0
-    posthook_priority: int = 0
-
     loglevel: int
     prehook_msg: t.Optional[prehook_msg_t]
     posthook_msg: t.Optional[posthook_msg_t]

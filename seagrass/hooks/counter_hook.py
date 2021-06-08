@@ -5,8 +5,6 @@ from collections import Counter
 
 class CounterHook:
 
-    prehook_priority: int = 0
-    posthook_priority: int = 0
     event_counter: t.Counter[str]
 
     def __init__(self):

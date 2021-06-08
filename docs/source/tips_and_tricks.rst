@@ -42,8 +42,6 @@ with the new one:
    >>> auditor = Auditor()
 
    >>> class PrintEventHook:
-   ...     prehook_priority = 0
-   ...     posthook_priority = 0
    ...     def prehook(self, event, args, kwargs):
    ...         print(f"{self.__class__.__name__}: {event} triggered")
    ...     def posthook(self, event, result, context):
