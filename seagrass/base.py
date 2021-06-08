@@ -77,14 +77,46 @@ class ProtoHook(t.Protocol[C]):
 
 def prehook_priority(hook: ProtoHook) -> int:
     priority = getattr(hook, "prehook_priority", DEFAULT_PREHOOK_PRIORITY)
-    assert isinstance(priority, int), f"prehook_priority for {hook} must be an integer"
+    if not isinstance(priority, int):
+        raise TypeError(f"prehook_priority for {hook} must be an integer")
     return priority
+
+
+prehook_priority.__doc__ = f"""\
+Get the priority in which the prehook should be executed. Prehooks are executed in
+*ascending* order of their priority, i.e. prehooks with low ``prehook_priority``
+are executed *before* those with high ``prehook_priority``.
+
+If ``hook.prehook_priority`` is defined, its value is used as the priority; otherwise
+the default priority ``{DEFAULT_PREHOOK_PRIORITY=}`` is used.
+
+:param ProtoHook hook: the hook whose prehook priority should be retrieved.
+:return: the priority of the prehook.
+:rtype: int
+:raises TypeError: if ``hook.prehook_priority`` is set to a non-integer value.
+"""
 
 
 def posthook_priority(hook: ProtoHook) -> int:
     priority = getattr(hook, "posthook_priority", DEFAULT_POSTHOOK_PRIORITY)
-    assert isinstance(priority, int), f"posthook_priority for {hook} must be an integer"
+    if not isinstance(priority, int):
+        raise TypeError(f"posthook_priority for {hook} must be an integer")
     return priority
+
+
+posthook_priority.__doc__ = f"""\
+Get the priority in which the posthook should be executed. Posthooks are executed in
+*descending* order of their priority, i.e. posthooks with low ``posthook_priority``
+are executed *after* those with high ``posthook_priority``.
+
+If ``hook.posthook_priority`` is defined, its value is used as the priority; otherwise
+the default priority ``{DEFAULT_POSTHOOK_PRIORITY=}`` is used.
+
+:param ProtoHook hook: the hook whose posthook priority should be retrieved.
+:return: the priority of the posthook.
+:rtype: int
+:raises TypeError: if ``hook.posthook_priority`` is set to a non-integer value.
+"""
 
 
 @t.runtime_checkable
