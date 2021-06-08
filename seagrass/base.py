@@ -58,7 +58,6 @@ class ProtoHook(t.Protocol[C]):
         :return: "context" data that can be used by the posthook.
         :rtype: C
         """
-        ...
 
     def posthook(self, event_name: str, result: t.Any, context: C):
         """Run the posthook. The posthook is run at the end of the execution of
@@ -68,11 +67,9 @@ class ProtoHook(t.Protocol[C]):
         :param Any result: The value that was returned by the event's wrapped function.
         :param C context: The context that was returned by the original call to ``prehook``.
         """
-        ...
 
     def reset(self):
         """Resets the internal state of the hook, if there is any."""
-        ...
 
 
 def prehook_priority(hook: ProtoHook) -> int:
@@ -132,4 +129,3 @@ class LogResultsHook(t.Protocol):
 
         :param logging.Logger logger: the logger that should be used to output results.
         """
-        ...

@@ -1,11 +1,4 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: '21.5b2' # https://github.com/psf/black/tags
-    hooks:
-      - id: black
-        language_version: python3
-        args: [--check]
-
   - repo: https://gitlab.com/pycqa/flake8
     rev: '3.9.2' # https://gitlab.com/pycqa/flake8/-/tags
     hooks:
@@ -16,3 +9,4 @@ repos:
     hooks:
       - id: mypy
         exclude: docs/
+        files: (seagrass|test)/.*.py
