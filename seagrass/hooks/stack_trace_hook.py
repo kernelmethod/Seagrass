@@ -25,9 +25,6 @@ class StackTraceHook:
     """An audit hook that captures the stack trace of where events are raised
     and collects statistics about caller locations."""
 
-    prehook_priority: int = 0
-    posthook_priority: int = 0
-
     stack_depth: t.Optional[int]
     stack_trace_counter: t.DefaultDict[str, t.Counter[t.Tuple[TracedFrame, ...]]]
 

@@ -1,6 +1,6 @@
 import sys
 import typing as t
-from seagrass.base import ProtoHook
+from seagrass.base import ProtoHook, prehook_priority, posthook_priority
 
 event_func_t = t.Callable[..., t.Any]
 
@@ -82,10 +82,10 @@ class Event:
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
         self.__prehook_execution_order = sorted(
-            range(len(hooks)), key=lambda i: (hooks[i].prehook_priority, i)
+            range(len(hooks)), key=lambda i: (prehook_priority(hooks[i]), i)
         )
         self.__posthook_execution_order = sorted(
-            range(len(hooks)), key=lambda i: (-hooks[i].posthook_priority, -i)
+            range(len(hooks)), key=lambda i: (-posthook_priority(hooks[i]), -i)
         )
 
     def __call__(self, *args, **kwargs):

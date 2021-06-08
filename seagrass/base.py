@@ -4,6 +4,9 @@ import typing as t
 # Type variable for contexts returned by prehooks
 C = t.TypeVar("C")
 
+DEFAULT_PREHOOK_PRIORITY: int = 0
+DEFAULT_POSTHOOK_PRIORITY: int = 0
+
 
 class ProtoHook(t.Protocol[C]):
     """Interface for hooks that can be used by Seagrass. New Seagrass hooks must define all of
@@ -21,9 +24,6 @@ class ProtoHook(t.Protocol[C]):
     .. doctest:: example_impl
 
         >>> class TypeCheckHook:
-        ...     prehook_priority: int = 0
-        ...     posthook_priority: int = 0
-        ...
         ...     def prehook(self, event_name, args, kwargs):
         ...         assert isinstance(args[0], str), "Input must be type str"
         ...
@@ -43,26 +43,6 @@ class ProtoHook(t.Protocol[C]):
         Traceback (most recent call last):
         AssertionError: Input must be type str
     """
-
-    @property
-    def prehook_priority(self) -> int:
-        """The priority in which the prehook should be executed. Prehooks are executed in
-        *ascending* order of their priority, i.e. prehooks with low ``prehook_priority``
-        are executed *before* those with high ``prehook_priority``.
-
-        :type: int
-        """
-        ...
-
-    @property
-    def posthook_priority(self) -> int:
-        """The priority in which the posthook should be executed. Posthooks are executed in
-        *descending* order of their priority, i.e. posthooks with low ``posthook_priority``
-        are executed *after* those with high ``posthook_priority``.
-
-        :type: int
-        """
-        ...
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
@@ -93,6 +73,18 @@ class ProtoHook(t.Protocol[C]):
     def reset(self):
         """Resets the internal state of the hook, if there is any."""
         ...
+
+
+def prehook_priority(hook: ProtoHook) -> int:
+    priority = getattr(hook, "prehook_priority", DEFAULT_PREHOOK_PRIORITY)
+    assert isinstance(priority, int), f"prehook_priority for {hook} must be an integer"
+    return priority
+
+
+def posthook_priority(hook: ProtoHook) -> int:
+    priority = getattr(hook, "posthook_priority", DEFAULT_POSTHOOK_PRIORITY)
+    assert isinstance(priority, int), f"posthook_priority for {hook} must be an integer"
+    return priority
 
 
 @t.runtime_checkable
