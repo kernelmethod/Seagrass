@@ -35,7 +35,7 @@ configure the logger to print all logs to ``stdout``:
 
    fh = logging.StreamHandler()
    fh.setLevel(logging.INFO)
-   formatter = logging.Formatter("(%(levelname)s) %(message)s")
+   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
    fh.setFormatter(formatter)
 
    logger = logging.getLogger("seagrass")
@@ -47,14 +47,14 @@ functions to see how many times each of them are called. We create a new event
 for the ``add`` function called ``event.add``, and an event for the ``sub``
 function called ``event.sub``.
 
-.. testsetup:: *
+.. testsetup:: basic-quickstart-example
 
    import logging, sys
    from seagrass import Auditor
 
    fh = logging.StreamHandler(stream=sys.stdout)
    fh.setLevel(logging.INFO)
-   formatter = logging.Formatter("(%(levelname)s) %(message)s")
+   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
    fh.setFormatter(formatter)
 
    logger = logging.getLogger("seagrass")
@@ -64,7 +64,7 @@ function called ``event.sub``.
    auditor = Auditor()
 
 
-.. testcode::
+.. testcode:: basic-quickstart-example
 
    from seagrass import Auditor
    from seagrass.hooks import CounterHook
@@ -93,17 +93,17 @@ function called ``event.sub``.
    # Display the results of auditing.
    auditor.log_results()
 
-.. testoutput::
+.. testoutput:: basic-quickstart-example
 
-   (INFO) Calls to events recorded by CounterHook:
-   (INFO)     event.add: 2
-   (INFO)     event.sub: 1
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     event.add: 2
+   (INFO) seagrass:     event.sub: 1
 
 From here we can start doing more complicated tasks. For instance, here's an
 example where we override Python's ``time.sleep`` and measure the amount of time
 spent in that function (as well as the number of times it gets called).
 
-.. doctest::
+.. doctest:: basic-quickstart-example
 
    >>> import time
    >>> from seagrass.hooks import CounterHook, TimerHook
@@ -115,14 +115,64 @@ spent in that function (as well as the number of times it gets called).
    ...     for _ in range(10):
    ...         time.sleep(0.1)
    >>> auditor.log_results()  # doctest: +SKIP
-   (INFO) Calls to events recorded by CounterHook:
-   (INFO)     time.sleep: 10
-   (INFO) TimerHook results:
-   (INFO)     Time spent in time.sleep: 1.006210
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:    time.sleep: 10
+   (INFO) seagrass: TimerHook results:
+   (INFO) seagrass:    Time spent in time.sleep: 1.006210
 
----------------------
-Defining custom hooks
----------------------
+-----------------------------------------------
+Raising audit events without wrapping functions
+-----------------------------------------------
 
-You can define your own hooks by creating a new class that implements the
-``seagrass.base.ProtoHook`` interface.
+Up until this point, we've been creating audit events by calling
+:py:meth:`seagrass.Auditor.decorate` and :py:meth:`seagrass.Auditor.wrap` on a
+function that we want to audit. Sometimes, though, it doesn't make sense to
+audit an entire function; perhaps we just want to raise a signal at a single
+point in time, and have Seagrass capture information about that signal.
+
+We can achieve this functionality by using
+:py:meth:`~seagrass.Auditor.create_event` and
+:py:meth:`~seagrass.Auditor.raise_event`. In the code snippet below, we create a
+new event ``my_sum.cumsum`` and call it at every iteration of the function
+``my_sum`` to get the cumulative sum that's being calculated internally.
+
+.. testsetup:: empty-auditing-events
+
+   import logging, sys
+   from seagrass import Auditor
+
+   fh = logging.StreamHandler(stream=sys.stdout)
+   fh.setLevel(logging.DEBUG)
+   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
+   fh.setFormatter(formatter)
+
+   logger = logging.getLogger("seagrass")
+   logger.setLevel(logging.DEBUG)
+   logger.addHandler(fh)
+
+   auditor = Auditor(logger=logger)
+
+.. doctest:: empty-auditing-events
+
+   >>> from seagrass.hooks import LoggingHook
+
+   >>> prehook_msg = lambda event_name, args, kwargs: f"cumsum={args[0]}"
+
+   >>> hook = LoggingHook(prehook_msg=prehook_msg)
+
+   >>> event_wrapper = auditor.create_event("my_sum.cumsum", hooks=[hook])
+
+   >>> def my_sum(iterable):
+   ...     total = 0.
+   ...     for val in iterable:
+   ...         auditor.raise_event("my_sum.cumsum", total)
+   ...         total += val
+   ...     return total
+
+   >>> with auditor.audit():
+   ...     my_sum([1, 2, 3, 4])
+   (DEBUG) seagrass: cumsum=0.0
+   (DEBUG) seagrass: cumsum=1.0
+   (DEBUG) seagrass: cumsum=3.0
+   (DEBUG) seagrass: cumsum=6.0
+   10.0

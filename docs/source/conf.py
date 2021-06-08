@@ -30,6 +30,7 @@ author = "kernelmethod"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
+    "sphinx_rtd_theme",
 ]
 
 autodoc_default_options = {
@@ -51,7 +52,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "pyramid"
+html_theme = "sphinx_rtd_theme"
 
 html_sidebars = {
     "**": ["globaltoc.html", "sourcelink.html", "searchbox.html"],
