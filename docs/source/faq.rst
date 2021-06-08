@@ -116,8 +116,6 @@ When are runtime audit hooks better than Seagrass?
 
   .. code:: python
 
-     >>> from tempfile import NamedTemporaryFile
-
      >>> def file_open_hook(event, args):
      ...    if event == "open":
      ...        filename, mode, flags = args
