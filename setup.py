@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="seagrass",
-    version="0.1.1",
+    version="0.2.0",
     description="Auditing and profiling multi-tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -16,6 +16,7 @@ setup(
     project_urls={
         "Source Code": "https://github.com/kernelmethod/Seagrass",
         "Bug Tracker": "https://github.com/kernelmethod/Seagrass/issues",
+        "Documentation": "https://seagrass.readthedocs.io/en/latest/",
     },
     classifiers=[
         "Programming Language :: Python :: 3.8",
