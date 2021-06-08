@@ -11,27 +11,51 @@ from test.base import SeagrassTestCaseBase
 class CreateAuditorTestCase(unittest.TestCase):
     """Tests for creating a new Auditor instance."""
 
-    def test_create_auditor_with_logger(self):
-        # Create a new Auditor with a custom logger
+    def _clear_logging_output(self):
+        # Helper function to clear output buffer used for testing logging
+        self.logging_output.seek(0)
+        self.logging_output.truncate()
+
+    def _configure_logger(self, logger: logging.Logger):
+        # Set the testing configuration for an input logger
+        logger.setLevel(logging.INFO)
+
+        fh = logging.StreamHandler(self.logging_output)
+        fh.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+    def setUp(self):
         self.logging_output = StringIO()
 
-        self.logger_name = "seagrass.test"
-        self.logger = logging.getLogger(self.logger_name)
-        self.logger.setLevel(logging.DEBUG)
-        fh = logging.StreamHandler(self.logging_output)
-        fh.setLevel(logging.INFO)
+    def test_default_logger_used_by_auditor(self):
+        # By default, Auditor should use the "seagrass" logger if no logger is specified
+        self._configure_logger(logging.getLogger("seagrass"))
 
-        formatter = logging.Formatter("%(message)s")
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-
-        auditor = Auditor(logger=self.logger)
+        auditor = Auditor()
         auditor.logger.info("Hello, world!")
         auditor.logger.debug("This message shouldn't appear")
 
-        self.logging_output.seek(0)
-        lines = self.logging_output.readlines()
-        self.assertEqual(lines, ["Hello, world!\n"])
+        output = self.logging_output.getvalue()
+        self.assertEqual(output, "(INFO) seagrass: Hello, world!\n")
+
+    def test_use_custom_logger_for_auditor(self):
+        # If a logger is explicitly specified, Auditor should use that logger instead
+        # of the default. The logger can either be provided as a logging.Logger
+        # instance or as the name of a logger.
+        self._configure_logger(logging.getLogger("test_logger"))
+
+        for logger in ("test_logger", logging.getLogger("test_logger")):
+            auditor = Auditor(logger=logger)
+            auditor.logger.info("Hello, world!")
+            auditor.logger.debug("This message shouldn't appear")
+
+            output = self.logging_output.getvalue()
+            self.assertEqual(output, "(INFO) test_logger: Hello, world!\n")
+
+            self._clear_logging_output()
 
 
 class SimpleAuditorFunctionsTestCase(SeagrassTestCaseBase):
