@@ -2,7 +2,7 @@
 
 [![PyPI package version](https://img.shields.io/pypi/v/seagrass.svg)](https://pypi.org/project/seagrass)
 [![Docs](https://readthedocs.org/projects/seagrass/badge/?version=latest)](https://seagrass.readthedocs.io/en/latest/?badge=latest)
-![Build status](https://github.com/kernelmethod/Seagrass/actions/workflows/CI.yml/badge.svg?branch=main)
+[![Build status](https://github.com/kernelmethod/Seagrass/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/kernelmethod/Seagrass/actions/workflows/CI.yml/)
 
 *A Python event auditing and profiling multitool*
 
