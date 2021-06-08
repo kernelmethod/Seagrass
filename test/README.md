@@ -23,7 +23,7 @@ You can get a code coverage report by using the
 [pytest-cov](https://github.com/pytest-dev/pytest-cov/) extension for pytest
 
 ```
-pytest -rsf --cov-report term-missing cov=seagrass test/
+pytest -rsf --cov-report term-missing --cov=seagrass test/
 ```
 
 This will also generate a `.coverage` file that you can use with other code
