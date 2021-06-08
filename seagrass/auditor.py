@@ -37,7 +37,7 @@ class Auditor:
         if isinstance(logger, logging.Logger):
             self.logger = logger
         else:
-            self.logger = logging.getLogger("seagrass")
+            self.logger = logging.getLogger(logger)
 
         self.events = dict()
         self.event_wrappers = dict()
