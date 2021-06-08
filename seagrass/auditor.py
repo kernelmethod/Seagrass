@@ -2,7 +2,7 @@ import functools
 import logging
 import typing as t
 from contextlib import contextmanager
-from seagrass.base import LoggableHook, ProtoHook
+from seagrass.base import LogResultsHook, ProtoHook
 from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
 
@@ -269,9 +269,10 @@ class Auditor:
         self.events[event_name].enabled = enabled
 
     def log_results(self):
-        """Log results stored by hooks by calling `log_results` on all :py:class:`seagrass.base.LoggableHook` hooks."""
+        """Log results stored by hooks by calling `log_results` on all
+        :py:class:`~seagrass.base.LogResultsHook` hooks."""
         for hook in self.hooks:
-            if isinstance(hook, LoggableHook):
+            if isinstance(hook, LogResultsHook):
                 hook.log_results(self.logger)
 
 

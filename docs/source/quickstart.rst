@@ -120,9 +120,3 @@ spent in that function (as well as the number of times it gets called).
    (INFO) TimerHook results:
    (INFO)     Time spent in time.sleep: 1.006210
 
----------------------
-Defining custom hooks
----------------------
-
-You can define your own hooks by creating a new class that implements the
-``seagrass.base.ProtoHook`` interface.

@@ -120,8 +120,8 @@ the default priority ``{DEFAULT_POSTHOOK_PRIORITY=}`` is used.
 
 
 @t.runtime_checkable
-class LoggableHook(t.Protocol):
-    """A mixin class for hooks that support an additional `log_results` method that
+class LogResultsHook(t.Protocol):
+    """A protocol class for hooks that support an additional `log_results` method that
     outputs the results of the hook."""
 
     def log_results(
