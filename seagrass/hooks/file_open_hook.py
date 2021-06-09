@@ -75,9 +75,9 @@ class FileOpenHook:
 
     def log_results(self, logger: logging.Logger) -> None:
         logger.info("%s results (file opened, count):", self.__class__.__name__)
-        for (event, counter) in self.file_open_counter.items():
+        for event in sorted(self.file_open_counter):
             logger.info("  event %s:", event)
-            for (info, count) in counter.items():
+            for (info, count) in self.file_open_counter[event].items():
                 logger.info(
                     "    %s (mode=%s, flags=%s): opened %d times",
                     info.filename,

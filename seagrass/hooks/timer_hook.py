@@ -36,5 +36,5 @@ class TimerHook:
 
     def log_results(self, logger: logging.Logger) -> None:
         logger.info("%s results:", self.__class__.__name__)
-        for (event, time_in_event) in self.event_times.items():
-            logger.info("    Time spent in %s: %f", event, time_in_event)
+        for event in sorted(self.event_times):
+            logger.info("    Time spent in %s: %f", event, self.event_times[event])
