@@ -5,7 +5,7 @@ import unittest
 from io import StringIO
 from seagrass import Auditor
 from seagrass.errors import EventNotFoundError
-from test.base import SeagrassTestCaseBase
+from test.base import SeagrassTestCaseMixin
 
 
 class CreateAuditorTestCase(unittest.TestCase):
@@ -58,7 +58,7 @@ class CreateAuditorTestCase(unittest.TestCase):
             self._clear_logging_output()
 
 
-class SimpleAuditorFunctionsTestCase(SeagrassTestCaseBase):
+class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
     def test_define_new_event(self):
         # Define a new event and ensure that it gets added to the auditor's events
         # dictionary and event_wrapper dictionary

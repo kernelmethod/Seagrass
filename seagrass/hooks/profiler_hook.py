@@ -1,8 +1,8 @@
-import cProfile as prof
 import logging
 import pstats
 import typing as t
 from io import StringIO
+from cProfile import Profile
 
 # Type alias to represent the input types that are allowed as "restrictions"
 R = t.Union[str, int, float]
@@ -12,7 +12,7 @@ class ProfilerHook:
     """A Seagrass hook that uses the built-in cProfile module to collect and log performance
     statistics on events."""
 
-    profiler: prof.Profile
+    profile: Profile
     sort_keys: t.Union[t.Tuple[int], t.Tuple[str, ...]]
     restrictions: t.Tuple[R, ...]
 
@@ -52,35 +52,50 @@ class ProfilerHook:
         else:
             self.restrictions = restrictions
 
-        self.reset()
+        self.profile = Profile()
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
         # Start profiling
-        self.profiler.enable()
+        self.profile.enable()
 
     def posthook(self, event_name: str, result: t.Any, context: None) -> None:
         # Stop profiling
-        self.profiler.disable()
+        self.profile.disable()
 
-    def get_stats(self, **kwargs) -> pstats.Stats:
-        """Return the profiling statistics as a pstats.Stats class."""
-        return pstats.Stats(self.profiler, **kwargs)
+    def get_stats(self, **kwargs) -> t.Optional[pstats.Stats]:
+        """Return the profiling statistics as a pstats.Stats class.
+
+        :param kwargs: Keyword arguments to pass to the constructor of `pstats.Stats`_.
+        :return: an instance of `pstats.Stats`_. If no profiling information was collected,
+            this function will return ``None`` instead.
+        :rtype: Optional[pstats.Stats]
+
+        .. _pstats.Stats: https://docs.python.org/3/library/profile.html#pstats.Stats
+        """
+        if self.profile.getstats() == []:   # type: ignore
+            return None
+        else:
+            return pstats.Stats(self.profile, **kwargs)
 
     def reset(self) -> None:
         """Reset the internal profiler."""
-        self.profiler = prof.Profile()
+        self.profile.clear()    # type: ignore
 
     def log_results(self, logger: logging.Logger) -> None:
         """Log the results captured by ProfilerHook."""
+        logger.info("Results from %s:", self.__class__.__name__)
+
         # Dump results to an in-memory stream
         output = StringIO()
-        stats = self.get_stats(stream=output).sort_stats(*self.sort_keys)
-        stats.print_stats(*self.restrictions)
+        if (stats := self.get_stats(stream=output)) is None:
+            logger.info("   (no samples were collected)")
+            return
+
+        stats.sort_stats(*self.sort_keys).print_stats(*self.restrictions)
 
         # Now take results from the in-memory stream and log them using the provided logger.
-        logger.info("Results from %s:", self.__class__.__name__)
         logger.info("")
         output.seek(0)
         for line in output.readlines():

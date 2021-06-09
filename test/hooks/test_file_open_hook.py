@@ -2,11 +2,13 @@
 
 import tempfile
 import unittest
-from test.base import HookTestCaseBase
+from test.base import HookTestCaseMixin
 from seagrass.hooks import FileOpenHook
 
 
-class FileOpenHookTestCase(HookTestCaseBase):
+class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
+
+    check_is_log_results_hook = True
 
     # We set track_nested_opens = True so that if we call open() in an event that's
     # nested in another event, we will count the open() for both events.
