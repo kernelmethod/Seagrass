@@ -15,7 +15,7 @@ class TimerHook:
 
     event_times: t.DefaultDict[str, float]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.event_times = defaultdict(float)
 
     def prehook(

@@ -2,7 +2,8 @@ import sys
 import typing as t
 from seagrass.base import ProtoHook, prehook_priority, posthook_priority
 
-event_func_t = t.Callable[..., t.Any]
+# A type variable used to represent the function wrapped by an Event.
+F = t.Callable[..., t.Any]
 
 
 class Event:
@@ -35,14 +36,14 @@ class Event:
 
     def __init__(
         self,
-        func: event_func_t,
+        func: F,
         name: str,
         enabled: bool = True,
         hooks: t.List[ProtoHook] = [],
         raise_runtime_events: bool = False,
         prehook_audit_event_name: t.Optional[str] = None,
         posthook_audit_event_name: t.Optional[str] = None,
-    ):
+    ) -> None:
         """Create a new Event.
 
         :param Callable[[...],Any] func: the function being wrapped by this event.
@@ -64,7 +65,7 @@ class Event:
         .. _Python runtime audit events: https://www.python.org/dev/peps/pep-0578/
         .. _sys.audit: https://docs.python.org/3/library/sys.html#sys.audit
         """
-        self.func: event_func_t = func
+        self.func: F = func
         self.enabled = enabled
         self.name = name
         self.raise_runtime_events = raise_runtime_events
@@ -88,7 +89,7 @@ class Event:
             range(len(hooks)), key=lambda i: (-posthook_priority(hooks[i]), -i)
         )
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> t.Any:
         """Call the function wrapped by the Event. If the event is enabled, its prehooks and
         posthooks are executed before and after the execution of the wrapped function.
 

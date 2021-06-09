@@ -8,7 +8,7 @@ from seagrass.hooks import TimerHook
 
 class TimerHookTestCase(HookTestCaseBase):
 
-    hook_class = TimerHook
+    hook_gen = TimerHook
 
     def test_hook_function(self):
         ausleep = self.auditor.wrap(time.sleep, "test.time.sleep", hooks=[self.hook])

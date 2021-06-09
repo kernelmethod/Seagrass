@@ -10,8 +10,12 @@ from seagrass.events import Event
 # current auditing context.
 _audit_logger_stack: t.List[logging.Logger] = []
 
+# A type variable used to represent a function that can take
+# arbitrary/unknown inputs and returns an arbitrary/unknown type
+F = t.TypeVar("F", bound=t.Callable[..., t.Any])
 
-def _empty_event_func(*args, **kwargs):
+
+def _empty_event_func(*args, **kwargs) -> None:
     """A function used to define empty events. This function can take an arbitrary combination
     of parameters, but internally it does nothing."""
 
@@ -28,7 +32,7 @@ class Auditor:
     hooks: t.Set[ProtoHook]
     __enabled: bool = False
 
-    def __init__(self, logger: t.Union[str, logging.Logger] = "seagrass"):
+    def __init__(self, logger: t.Union[str, logging.Logger] = "seagrass") -> None:
         """Create a new Auditor instance.
 
         :param Union[str,logging.Logger] logger: The logger that this auditor should use. When set
@@ -51,7 +55,7 @@ class Auditor:
         """
         return self.__enabled
 
-    def toggle_auditing(self, mode: bool):
+    def toggle_auditing(self, mode: bool) -> None:
         """Enable or disable auditing.
 
         :param bool mode: When set to ``True``, auditing is enabled; when set to ``False``,
@@ -60,7 +64,7 @@ class Auditor:
         self.__enabled = mode
 
     @contextmanager
-    def audit(self):
+    def audit(self) -> t.Iterator[None]:
         """Create a new context within which the auditor is enabled. You can replicate this
         functionality by calling :py:meth:`toggle_auditing`, e.g.
 
@@ -92,11 +96,11 @@ class Auditor:
 
     def wrap(
         self,
-        func: t.Callable,
+        func: F,
         event_name: str,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
-    ) -> t.Callable:
+    ) -> F:
         """Wrap a function with a new auditing event.
 
         :param Callable func: the function that should be wrapped in a new event.
@@ -150,13 +154,13 @@ class Auditor:
                 return new_event(*args, **kwargs)
 
         self.event_wrappers[event_name] = wrapper
-        return wrapper
+        return t.cast(F, wrapper)
 
     def decorate(
         self,
         event_name: str,
         **kwargs,
-    ) -> t.Callable:
+    ) -> t.Callable[[F], F]:
         """A function decorator that tells the auditor to monitor the decorated function.
 
         .. testcode::
@@ -170,7 +174,7 @@ class Auditor:
                 return x + y
         """
 
-        def wrapper(func):
+        def wrapper(func: F):
             return self.wrap(func, event_name, **kwargs)
 
         return wrapper
@@ -184,8 +188,6 @@ class Auditor:
         :param kwargs: keyword arguments. The keyword arguments for this function are the same
             as those for :py:meth:`wrap`.
         :return: returns a wrapper function around the event that was created.
-        :rtype: Callable[..., None]
-
         **Example:**
 
         .. doctest::
@@ -228,7 +230,7 @@ class Auditor:
         else:
             raise EventNotFoundError(event_name)
 
-    def toggle_event(self, event_name: str, enabled: bool):
+    def toggle_event(self, event_name: str, enabled: bool) -> None:
         """Enables or disables an auditing event.
 
         :param str event_name: the name of the event to toggle.
@@ -268,7 +270,7 @@ class Auditor:
         """
         self.events[event_name].enabled = enabled
 
-    def log_results(self):
+    def log_results(self) -> None:
         """Log results stored by hooks by calling `log_results` on all
         :py:class:`~seagrass.base.LogResultsHook` hooks."""
         for hook in self.hooks:

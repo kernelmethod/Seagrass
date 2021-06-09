@@ -59,7 +59,7 @@ class ProtoHook(t.Protocol[C]):
         :rtype: C
         """
 
-    def posthook(self, event_name: str, result: t.Any, context: C):
+    def posthook(self, event_name: str, result: t.Any, context: C) -> None:
         """Run the posthook. The posthook is run at the end of the execution of
         an audited event, after the function wrapped by the event is run.
 
@@ -68,7 +68,7 @@ class ProtoHook(t.Protocol[C]):
         :param C context: The context that was returned by the original call to ``prehook``.
         """
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the internal state of the hook, if there is any."""
 
 
@@ -124,7 +124,7 @@ class LogResultsHook(t.Protocol):
     def log_results(
         self,
         logger: logging.Logger,
-    ):
+    ) -> None:
         """Log results that have been accumulated by the hook using the provided logger.
 
         :param logging.Logger logger: the logger that should be used to output results.

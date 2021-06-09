@@ -17,7 +17,7 @@ class TracedFrame(t.NamedTuple):
     def from_frame_info(cls, frame: inspect.FrameInfo) -> "TracedFrame":
         return TracedFrame(frame.filename, frame.lineno)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.filename}#{self.lineno}"
 
 
@@ -28,7 +28,7 @@ class StackTraceHook:
     stack_depth: t.Optional[int]
     stack_trace_counter: t.DefaultDict[str, t.Counter[t.Tuple[TracedFrame, ...]]]
 
-    def __init__(self, stack_depth: t.Optional[int] = 10):
+    def __init__(self, stack_depth: t.Optional[int] = 10) -> None:
         self.stack_depth = stack_depth
         self.stack_trace_counter = defaultdict(Counter)
 
@@ -53,5 +53,5 @@ class StackTraceHook:
         # Posthook does nothing
         pass
 
-    def reset(self):
+    def reset(self) -> None:
         self.stack_trace_counter.clear()

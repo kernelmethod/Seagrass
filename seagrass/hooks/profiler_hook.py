@@ -4,6 +4,9 @@ import pstats
 import typing as t
 from io import StringIO
 
+# Type alias to represent the inputs that are allowed as "restrictions" for log_results
+R = t.Union[str, int, float]
+
 
 class ProfilerHook:
 
@@ -16,7 +19,7 @@ class ProfilerHook:
     prehook_priority: int = 10
     posthook_priority: int = 10
 
-    def __init__(self, restrictions: t.Optional[t.Tuple[t.Any, ...]] = None):
+    def __init__(self, restrictions: t.Optional[t.Tuple[R, ...]] = None) -> None:
         restrictions = tuple() if restrictions is None else restrictions
         self.restrictions = restrictions
         self.reset()
@@ -27,7 +30,7 @@ class ProfilerHook:
         # Start profiling
         self.profiler.enable()
 
-    def posthook(self, event_name: str, result: t.Any, context: None):
+    def posthook(self, event_name: str, result: t.Any, context: None) -> None:
         # Stop profiling
         self.profiler.disable()
 
@@ -39,7 +42,7 @@ class ProfilerHook:
         """Reset the internal profiler."""
         self.profiler = prof.Profile()
 
-    def log_results(self, logger: logging.Logger):
+    def log_results(self, logger: logging.Logger) -> None:
         """Log the results captured by ProfilerHook."""
         # Dump results to an in-memory stream
         output = StringIO()
