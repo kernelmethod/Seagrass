@@ -188,6 +188,7 @@ class Auditor:
         :param kwargs: keyword arguments. The keyword arguments for this function are the same
             as those for :py:meth:`wrap`.
         :return: returns a wrapper function around the event that was created.
+
         **Example:**
 
         .. doctest::
