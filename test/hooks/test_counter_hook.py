@@ -1,13 +1,14 @@
 # Tests for the CounterHook auditing hook.
 
 from seagrass.hooks import CounterHook
-from test.base import HookTestCaseBase
+from test.base import HookTestCaseMixin
 import unittest
 
 
-class CounterHookTestCase(HookTestCaseBase):
+class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = CounterHook
+    check_is_log_results_hook = True
 
     def test_hook_function(self):
         @self.auditor.decorate("test.say_hello", hooks=[self.hook])

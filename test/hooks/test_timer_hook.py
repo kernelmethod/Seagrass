@@ -2,13 +2,14 @@
 
 import time
 import unittest
-from test.base import HookTestCaseBase
+from test.base import HookTestCaseMixin
 from seagrass.hooks import TimerHook
 
 
-class TimerHookTestCase(HookTestCaseBase):
+class TimerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = TimerHook
+    check_is_log_results_hook = True
 
     def test_hook_function(self):
         ausleep = self.auditor.wrap(time.sleep, "test.time.sleep", hooks=[self.hook])
