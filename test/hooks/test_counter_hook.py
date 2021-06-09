@@ -7,7 +7,7 @@ import unittest
 
 class CounterHookTestCase(HookTestCaseBase):
 
-    hook_class = CounterHook
+    hook_gen = CounterHook
 
     def test_hook_function(self):
         @self.auditor.decorate("test.say_hello", hooks=[self.hook])
