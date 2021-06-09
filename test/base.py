@@ -1,13 +1,20 @@
 # Testing utilities and base classes for testing Seagrass
 
 import logging
+import typing as t
 import unittest
 from io import StringIO
 from seagrass import Auditor
+from seagrass.base import ProtoHook
 
 
 class SeagrassTestCaseBase(unittest.TestCase):
-    def setUp(self):
+
+    logging_output: StringIO
+    logger: logging.Logger
+    auditor: Auditor
+
+    def setUp(self) -> None:
         # Set up an auditor with a basic logging configuration
         self.logging_output = StringIO()
         fh = logging.StreamHandler(self.logging_output)
@@ -28,14 +35,9 @@ class SeagrassTestCaseBase(unittest.TestCase):
 class HookTestCaseBase(SeagrassTestCaseBase):
     """A base testing class for auditor hooks."""
 
+    hook: ProtoHook
+    hook_gen: t.Callable[[], ProtoHook]
+
     def setUp(self):
         super().setUp()
-
-        if hasattr(self, "hook_gen"):
-            self.hook = self.hook_gen()
-        elif hasattr(self, "hook_class"):
-            self.hook = self.hook_class()
-        else:
-            self.fail(
-                "Either 'hook_gen' or 'hook_class' must be defined for children of BaseHookTestCase"
-            )
+        self.hook = self.hook_gen()

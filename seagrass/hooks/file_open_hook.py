@@ -25,7 +25,7 @@ class FileOpenHook:
     track_nested_opens: bool
     __current_event_stack: t.List[str]
 
-    def __init__(self, track_nested_opens: bool = False):
+    def __init__(self, track_nested_opens: bool = False) -> None:
         self.file_open_counter = defaultdict(t.Counter[FileOpenInfo])
         self.track_nested_opens = track_nested_opens
         self.__current_event_stack = []
@@ -33,7 +33,7 @@ class FileOpenHook:
         # Add the __sys_audit_hook closure as a new audit hook
         sys.addaudithook(self.__sys_audit_hook)
 
-    def __sys_audit_hook(self, event, args):
+    def __sys_audit_hook(self, event: str, args: t.Tuple[t.Any, ...]) -> None:
         try:
             if len(self.__current_event_stack) > 0 and event == "open":
                 filename, mode, flags = args

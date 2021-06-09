@@ -11,4 +11,8 @@ target-version = ['py38']
 [tool.mypy]
 python_version = "3.8"
 disallow_untyped_calls = true
-ignore_missing_imports = true
+disallow_subclassing_any = true
+no_implicit_optional = true
+strict_equality = true
+warn_return_any = true
+warn_unreachable = true

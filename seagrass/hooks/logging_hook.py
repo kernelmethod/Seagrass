@@ -19,7 +19,7 @@ class LoggingHook:
         prehook_msg: t.Optional[prehook_msg_t] = None,
         posthook_msg: t.Optional[posthook_msg_t] = None,
         loglevel: int = logging.DEBUG,
-    ):
+    ) -> None:
         if prehook_msg is None and posthook_msg is None:
             raise ValueError(
                 "At least one of the keyword arguments prehook_msg and posthook_msg "

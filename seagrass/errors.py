@@ -11,7 +11,7 @@ class EventNotFoundError(SeagrassError):
 
     event_name: str
 
-    def __init__(self, event_name: str):
+    def __init__(self, event_name: str) -> None:
         """Create a new EventNotFoundError.
 
         :param str event_name: the name of the event that could not be found.
