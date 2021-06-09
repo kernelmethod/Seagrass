@@ -24,5 +24,5 @@ class CounterHook:
 
     def log_results(self, logger: logging.Logger) -> None:
         logger.info("Calls to events recorded by %s:", self.__class__.__name__)
-        for (event, count) in self.event_counter.items():
-            logger.info("    %s: %d", event, count)
+        for event in sorted(self.event_counter):
+            logger.info("    %s: %d", event, self.event_counter[event])
