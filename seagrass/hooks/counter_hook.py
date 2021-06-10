@@ -4,6 +4,37 @@ from collections import Counter
 
 
 class CounterHook:
+    """A Seagrass hook that counts the number of times an event occurs.
+
+    **Examples:**
+
+    .. testsetup:: counterhook-examples
+
+       from seagrass import Auditor
+       from seagrass._docs import configure_logging
+
+       configure_logging()
+       auditor = Auditor()
+
+    .. doctest:: counterhook-examples
+
+       >>> from seagrass.hooks import CounterHook
+
+       >>> hook = CounterHook()
+
+       >>> event_a = auditor.create_event("event_a", hooks=[hook])
+
+       >>> event_b = auditor.create_event("event_b", hooks=[hook])
+
+       >>> with auditor.audit(log_results=True):
+       ...     for _ in range(15):
+       ...         auditor.raise_event("event_a")
+       ...     for _ in range(8):
+       ...         auditor.raise_event("event_b")
+       (INFO) seagrass: Calls to events recorded by CounterHook:
+       (INFO) seagrass:     event_a: 15
+       (INFO) seagrass:     event_b: 8
+    """
 
     event_counter: t.Counter[str]
 
