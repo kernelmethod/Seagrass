@@ -24,5 +24,10 @@ class CounterHook:
 
     def log_results(self, logger: logging.Logger) -> None:
         logger.info("Calls to events recorded by %s:", self.__class__.__name__)
+
+        if len(self.event_counter) == 0:
+            logger.info("    (no events recorded)")
+            return
+
         for event in sorted(self.event_counter):
             logger.info("    %s: %d", event, self.event_counter[event])

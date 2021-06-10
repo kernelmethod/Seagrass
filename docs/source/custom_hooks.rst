@@ -23,9 +23,6 @@ that just prints the arguments given to the
        def posthook(self, event_name, result, context):
            print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
 
-       def reset(self):
-           pass
-
    class ElapsedTimeHook:
        def prehook(self, event_name, args, kwargs) -> float:
            print(f"ElapsedTimeHook: Getting start time for {event_name}...")
@@ -35,9 +32,6 @@ that just prints the arguments given to the
            elapsed = time.time() - context
            end = time.time()
            print(f"ElapsedTimeHook: Time spent in {event_name}: {elapsed:.1f}s")
-   
-       def reset(self):
-           pass
 
    auditor = Auditor()
 
@@ -50,9 +44,6 @@ that just prints the arguments given to the
 
        def posthook(self, event_name, result, context):
            print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
-
-       def reset(self):
-           pass
 
 This class satisfies the ``ProtoHook`` interface, so we can start using it to
 hook events:
@@ -106,8 +97,6 @@ executing an event:
    ...         end = time.time()
    ...         print(f"ElapsedTimeHook: Time spent in {event_name}: {elapsed:.1f}s")
    ...
-   ...     def reset(self):
-   ...         pass
 
    >>> hook = ElapsedTimeHook()
 
@@ -219,9 +208,107 @@ Their are two ways to change the order in which hooks are run:
       ArgsHook: posthook: event_name='priority_ex_2', result=None, context=None
 
 
---------------------------------------------------------------
-Logging results with :py:class:`~seagrass.base.LogResultsHook`
---------------------------------------------------------------
+-----------------------
+Additional hook methods
+-----------------------
+
+All hooks are required to define the methods specified by the
+:py:class:`~seagrass.base.ProtoHook` protocol class. In addition, Seagrass
+defines a few other protocols that your hook can implement to get even more
+functionality.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:py:class:`~seagrass.base.ResettableHook`: resetting hooks with internal state
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes, you may want to perform multiple auditing runs, and report the
+results from each run. Here's an example where we use
+:py:class:`seagrass.hooks.CounterHook` to count the number of times the event
+``"audit.foo"`` gets raised:
+
+.. testsetup:: resettable-hook-example
+
+   import logging, sys
+   from seagrass import Auditor
+
+   fh = logging.StreamHandler(stream=sys.stdout)
+   fh.setLevel(logging.INFO)
+   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
+   fh.setFormatter(formatter)
+
+   logger = logging.getLogger("seagrass")
+   logger.handlers = []
+   logger.setLevel(logging.INFO)
+   logger.addHandler(fh)
+
+   auditor = Auditor(logger=logger)
+
+.. doctest:: resettable-hook-example
+
+   >>> from seagrass.hooks import CounterHook
+
+   >>> hook = CounterHook()
+
+   >>> ev_foo = auditor.create_event("audit.foo", hooks=[hook])
+
+   >>> with auditor.audit():
+   ...     auditor.raise_event("audit.foo")
+
+   >>> auditor.log_results()
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     audit.foo: 1
+
+   >>> with auditor.audit():
+   ...     auditor.raise_event("audit.foo")
+
+   >>> auditor.log_results()
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     audit.foo: 2
+
+
+Notice that the second time we called ``log_results``, it contained the results
+for both the first auditing context and the second auditing context. If we want
+to reset results between runs, we need to call ``hook.reset()``:
+
+.. doctest:: resettable-hook-example
+
+   >>> hook.reset()
+
+   >>> with auditor.audit():
+   ...     auditor.raise_event("audit.foo")
+
+   >>> auditor.log_results()
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     audit.foo: 1
+
+Alternatively, we could pass ``reset_hooks=True`` and ``log_results=True`` when
+we call ``auditor.audit``. This logs all hook results and then resets the hooks
+when we leave the auditing context:
+
+.. doctest:: resettable-hook-example
+
+   >>> hook.reset()
+
+   >>> with auditor.audit(reset_hooks=True, log_results=True):
+   ...     auditor.raise_event("audit.foo")
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     audit.foo: 1
+
+   >>> # Since the hooks were reset, log_results won't show any recorded events
+
+   >>> auditor.log_results()
+   (INFO) seagrass: Calls to events recorded by CounterHook:
+   (INFO) seagrass:     (no events recorded)
+
+A hook that implements the :py:class:`~seagrass.base.ResettableHook` interface
+by implementing :py:meth:`~seagrass.base.ResettableHook.reset` can be reset
+using ``auditor.reset_hooks()`` or by passing ``reset_hooks=True`` into
+``auditor.audit()``. For most hooks that have some kind of mutable internal
+state, you probably want to implement this interface.
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:py:class:`~seagrass.base.LogResultsHook`: logging your hook's results
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Hooks that implement the :py:class:`seagrass.base.LogResultsHook` interface (in
 addition to :py:class:`~seagrass.base.ProtoHook` will also have their results
@@ -249,7 +336,7 @@ logged when ``auditor.log_results()`` is called.
 
    >>> class TotalElapsedTimeHook:
    ...      def __init__(self):
-   ...          self.reset()
+   ...          self.ctr = 0.
    ...
    ...      def prehook(self, event_name, args, kwargs) -> float:
    ...          return time.time()
@@ -257,9 +344,6 @@ logged when ``auditor.log_results()`` is called.
    ...      def posthook(self, event_name, result, context: float):
    ...          start_time = context
    ...          self.ctr += time.time() - start_time
-   ...
-   ...      def reset(self):
-   ...          self.ctr = 0.
    ...
    ...      def log_results(self, logger):
    ...          logger.info("TotalElapsedTimeHook: elapsed time: %.1fs", self.ctr)

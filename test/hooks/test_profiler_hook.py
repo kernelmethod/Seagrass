@@ -9,6 +9,7 @@ from seagrass.hooks import ProfilerHook
 class ProfilerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     check_is_log_results_hook = True
+    check_is_resettable_hook = True
 
     @staticmethod
     def hook_gen():

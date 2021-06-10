@@ -6,6 +6,8 @@ from seagrass.hooks import StackTraceHook
 class StackTraceHookTestCase(unittest.TestCase):
     """Tests for the StackTraceHook auditing hook."""
 
+    check_is_resettable_hook = True
+
     def test_hook_function(self):
         auditor = Auditor()
         hook = StackTraceHook()

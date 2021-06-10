@@ -29,9 +29,6 @@ class ProtoHook(t.Protocol[C]):
         ...
         ...     def posthook(self, event_name, result, context):
         ...         pass
-        ...
-        ...     def reset(self):
-        ...         pass
 
         >>> @auditor.decorate("event.say_hello", hooks=[TypeCheckHook()])
         ... def say_hello(name: str):
@@ -67,9 +64,6 @@ class ProtoHook(t.Protocol[C]):
         :param Any result: The value that was returned by the event's wrapped function.
         :param C context: The context that was returned by the original call to ``prehook``.
         """
-
-    def reset(self) -> None:
-        """Resets the internal state of the hook, if there is any."""
 
 
 def prehook_priority(hook: ProtoHook) -> int:
@@ -129,3 +123,11 @@ class LogResultsHook(t.Protocol):
 
         :param logging.Logger logger: the logger that should be used to output results.
         """
+
+
+@t.runtime_checkable
+class ResettableHook(t.Protocol):
+    """A protocol class for hooks that can be reset."""
+
+    def reset(self) -> None:
+        """Reset the internal state of the hook."""
