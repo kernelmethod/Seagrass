@@ -1,10 +1,15 @@
 # Tests for protocols and functions defined in seagrass.base
 
 import seagrass.base as base
+import typing as t
 import unittest
 
 
 class CustomHookImplementationTestCase(unittest.TestCase):
+    def setUp(self):
+        # Create a version of the ProtoHook protocol that we can check at runtime.
+        self.CheckableProtoHook = t.runtime_checkable(base.ProtoHook)
+
     def test_get_prehook_and_posthook_priority(self):
         class MyHook:
             prehook_priority: int = 7
@@ -15,10 +20,12 @@ class CustomHookImplementationTestCase(unittest.TestCase):
             def posthook(self, *args):
                 ...
 
-            def reset(self):
-                ...
-
         hook = MyHook()
+        self.assertIsInstance(
+            hook,
+            self.CheckableProtoHook,
+            f"{hook.__class__.__name__} does not satisfy the hooking protocol",
+        )
         self.assertEqual(base.prehook_priority(hook), 7)
         self.assertEqual(base.posthook_priority(hook), base.DEFAULT_POSTHOOK_PRIORITY)
 

@@ -9,6 +9,7 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = CounterHook
     check_is_log_results_hook = True
+    check_is_resettable_hook = True
 
     def test_hook_function(self):
         @self.auditor.decorate("test.say_hello", hooks=[self.hook])

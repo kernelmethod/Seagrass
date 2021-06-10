@@ -2,7 +2,7 @@ import functools
 import logging
 import typing as t
 from contextlib import contextmanager
-from seagrass.base import LogResultsHook, ProtoHook
+from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
 from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
 
@@ -64,7 +64,7 @@ class Auditor:
         self.__enabled = mode
 
     @contextmanager
-    def audit(self) -> t.Iterator[None]:
+    def audit(self, reset_hooks: bool = False, log_results: bool = False) -> t.Iterator[None]:
         """Create a new context within which the auditor is enabled. You can replicate this
         functionality by calling :py:meth:`toggle_auditing`, e.g.
 
@@ -85,6 +85,11 @@ class Auditor:
         However, using ``with auditor.audit()`` in place of ``auditor.toggle_auditing`` has some
         additional benefits too, e.g. it allows you to access the logger for the most recent
         auditing context using ``seagrass.get_audit_logger``.
+
+        :param bool log_results: Log hooks results with :py:meth:`log_results` before exiting
+            the auditing context.
+        :param bool reset_hooks: Reset hooks with :py:meth:`reset`: before exiting the
+            auditing context.
         """
         try:
             self.toggle_auditing(True)
@@ -93,6 +98,11 @@ class Auditor:
         finally:
             self.toggle_auditing(False)
             _audit_logger_stack.pop()
+
+            if log_results:
+                self.log_results()
+            if reset_hooks:
+                self.reset_hooks()
 
     def wrap(
         self,
@@ -213,6 +223,12 @@ class Auditor:
             1
         """
         return self.wrap(_empty_event_func, event_name, **kwargs)
+
+    def reset_hooks(self) -> None:
+        """Reset all of the hooks used by this Auditor."""
+        for hook in self.hooks:
+            if isinstance(hook, ResettableHook):
+                hook.reset()
 
     def raise_event(self, event_name: str, *args, **kwargs) -> t.Any:
         """Trigger an audit event using the input arguments and keyword arguments.

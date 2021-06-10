@@ -46,8 +46,6 @@ with the new one:
    ...         print(f"{self.__class__.__name__}: {event} triggered")
    ...     def posthook(self, event, result, context):
    ...         pass
-   ...     def reset(self):
-   ...         pass
 
    >>> hooks = [PrintEventHook()]
 

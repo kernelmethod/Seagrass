@@ -29,9 +29,6 @@ class ProtoHook(t.Protocol[C]):
         ...
         ...     def posthook(self, event_name, result, context):
         ...         pass
-        ...
-        ...     def reset(self):
-        ...         pass
 
         >>> @auditor.decorate("event.say_hello", hooks=[TypeCheckHook()])
         ... def say_hello(name: str):
@@ -67,9 +64,6 @@ class ProtoHook(t.Protocol[C]):
         :param Any result: The value that was returned by the event's wrapped function.
         :param C context: The context that was returned by the original call to ``prehook``.
         """
-
-    def reset(self) -> None:
-        """Resets the internal state of the hook, if there is any."""
 
 
 def prehook_priority(hook: ProtoHook) -> int:
@@ -129,3 +123,42 @@ class LogResultsHook(t.Protocol):
 
         :param logging.Logger logger: the logger that should be used to output results.
         """
+
+
+@t.runtime_checkable
+class ResettableHook(t.Protocol):
+    """A protocol class for hooks that can be reset.
+
+    **Examples:** here is a minimal example of a Seagrass hook that satisfies the
+    ``ResettableHook`` interface. Every time the event ``"my_event"`` is raised,
+    the hook prints the number of times the event has been raised so far and
+    increments its counter.
+
+    .. doctest::
+
+       >>> from seagrass.base import ResettableHook
+
+       >>> class PrintEventHook:
+       ...     def __init__(self):
+       ...         self.reset()
+       ...
+       ...     def prehook(self, event_name, *args):
+       ...         if event_name == "my_event":
+       ...             self.event_counter += 1
+       ...             print(f"my_event has be raised {self.event_counter} times")
+       ...
+       ...     def posthook(self, *args):
+       ...         pass
+       ...
+       ...     def reset(self):
+       ...         self.event_counter = 0
+       ...
+
+       >>> hook = PrintEventHook()
+
+       >>> isinstance(hook, ResettableHook)
+       True
+    """
+
+    def reset(self) -> None:
+        """Reset the internal state of the hook."""

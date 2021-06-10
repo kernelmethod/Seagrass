@@ -10,6 +10,7 @@ class TimerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = TimerHook
     check_is_log_results_hook = True
+    check_is_resettable_hook = True
 
     def test_hook_function(self):
         ausleep = self.auditor.wrap(time.sleep, "test.time.sleep", hooks=[self.hook])

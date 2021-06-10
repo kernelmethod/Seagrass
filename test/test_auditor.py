@@ -87,16 +87,13 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
 
         class TestHook:
             def __init__(self):
-                self.reset()
+                self.last_prehook_args = self.last_posthook_args = None
 
             def prehook(self, event_name, args, kwargs):
                 self.last_prehook_args = (event_name, args, kwargs)
 
             def posthook(self, event_name, result, context):
                 self.last_posthook_args = (event_name, result)
-
-            def reset(self):
-                self.last_prehook_args = self.last_posthook_args = None
 
         hook = TestHook()
         self.auditor.create_event("test.signal", hooks=[hook])
@@ -126,16 +123,13 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
 
         class MySumHook:
             def __init__(self):
-                self.reset()
+                self.cumsums = []
 
             def prehook(self, event_name, args, kwargs):
                 self.cumsums.append(args[0])
 
             def posthook(self, *args):
                 pass
-
-            def reset(self):
-                self.cumsums = []
 
         hook = MySumHook()
         self.auditor.create_event("my_sum.cumsum", hooks=[hook])

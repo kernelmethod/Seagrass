@@ -3,38 +3,32 @@
 import logging
 import unittest
 from functools import reduce
-from io import StringIO
-from seagrass import Auditor
-from seagrass.hooks import LoggingHook
 from operator import add, mul
+from seagrass.hooks import LoggingHook
+from test.base import HookTestCaseMixin
 
 
-class LoggingHookTestCase(unittest.TestCase):
+class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
     def setUp(self):
-        self.logging_output = StringIO()
-        self.logger = logging.getLogger("logging_test_case")
-        self.logger.setLevel(logging.DEBUG)
+        super(HookTestCaseMixin, self).setUp()
 
-        fh = logging.StreamHandler(self.logging_output)
-        fh.setLevel(logging.DEBUG)
+        self.hook_pre = LoggingHook(
+            prehook_msg=lambda e, args, kwargs: f"hook_pre: {e}, {args=}, {kwargs=}",
+        )
+        self.hook_both = LoggingHook(
+            prehook_msg=lambda e, args, kwargs: f"hook_both: {e}, {args=}, {kwargs=}",
+            posthook_msg=lambda e, result: f"hook_both: {e}, {result=}",
+            loglevel=logging.INFO,
+        )
 
-        formatter = logging.Formatter("%(message)s")
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
+        # Use hook_both as self.hook for running additional tests that are defined for
+        # test case classes that subclass from HookTestMixin.
+        self.hook = self.hook_both
 
     def test_hook_function(self):
-        auditor = Auditor(logger=self.logger)
-        hook_pre = LoggingHook(
-            prehook_msg=lambda e, args, kwargs: f"(prehook) hook_pre: {e}, {args=}, {kwargs=}"
-        )
-        hook_both = LoggingHook(
-            prehook_msg=lambda e, args, kwargs: f"(prehook) hook_both: {e}, {args=}, {kwargs=}",
-            posthook_msg=lambda e, result: f"(posthook) hook_both: {e}, {result=}",
-        )
-
         event = "test.multiply_or_add"
 
-        @auditor.decorate(event, hooks=[hook_pre, hook_both])
+        @self.auditor.decorate(event, hooks=[self.hook_pre, self.hook_both])
         def multiply_or_add(*args, op="*"):
             if op == "*":
                 return reduce(mul, args, 1)
@@ -45,23 +39,18 @@ class LoggingHookTestCase(unittest.TestCase):
 
         args = (1, 2, 3, 4)
         kwargs_add = {"op": "+"}
-        with auditor.audit():
+        with self.auditor.audit():
             multiply_or_add(*args)
             multiply_or_add(*args, **kwargs_add)
 
-        self.logging_output.seek(0)
-        output = self.logging_output.read().rstrip().split("\n")
+        output = self.logging_output.getvalue().rstrip().split("\n")
+        self.assertEqual(output[0], f"(DEBUG) hook_pre: {event}, {args=}, kwargs={{}}")
+        self.assertEqual(output[1], f"(INFO) hook_both: {event}, {args=}, kwargs={{}}")
+        self.assertEqual(output[2], f"(INFO) hook_both: {event}, result={24}")
         self.assertEqual(
-            output[0], f"(prehook) hook_pre: {event}, {args=}, kwargs={{}}"
+            output[3], f"(DEBUG) hook_pre: {event}, {args=}, kwargs={kwargs_add}"
         )
         self.assertEqual(
-            output[1], f"(prehook) hook_both: {event}, {args=}, kwargs={{}}"
+            output[4], f"(INFO) hook_both: {event}, {args=}, kwargs={kwargs_add}"
         )
-        self.assertEqual(output[2], f"(posthook) hook_both: {event}, result={24}")
-        self.assertEqual(
-            output[3], f"(prehook) hook_pre: {event}, {args=}, kwargs={kwargs_add}"
-        )
-        self.assertEqual(
-            output[4], f"(prehook) hook_both: {event}, {args=}, kwargs={kwargs_add}"
-        )
-        self.assertEqual(output[5], f"(posthook) hook_both: {event}, result={10}")
+        self.assertEqual(output[5], f"(INFO) hook_both: {event}, result={10}")
