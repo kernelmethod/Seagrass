@@ -111,7 +111,7 @@ the default priority ``{DEFAULT_POSTHOOK_PRIORITY=}`` is used.
 
 
 @t.runtime_checkable
-class LogResultsHook(t.Protocol):
+class LogResultsHook(ProtoHook[C], t.Protocol[C]):
     """A protocol class for hooks that support an additional `log_results` method that
     outputs the results of the hook."""
 
@@ -126,8 +126,39 @@ class LogResultsHook(t.Protocol):
 
 
 @t.runtime_checkable
-class ResettableHook(t.Protocol):
-    """A protocol class for hooks that can be reset."""
+class ResettableHook(ProtoHook[C], t.Protocol[C]):
+    """A protocol class for hooks that can be reset.
+
+    **Examples:** here is a minimal example of a Seagrass hook that satisfies the
+    ``ResettableHook`` interface. Every time the event ``"my_event"`` is raised,
+    the hook prints the number of times the event has been raised so far and
+    increments its counter.
+
+    .. doctest::
+
+       >>> from seagrass.base import ResettableHook
+
+       >>> class PrintEventHook:
+       ...     def __init__(self):
+       ...         self.reset()
+       ...
+       ...     def prehook(self, event_name, *args):
+       ...         if event_name == "my_event":
+       ...             self.event_counter += 1
+       ...             print(f"my_event has be raised {self.event_counter} times")
+       ...
+       ...     def posthook(self, *args):
+       ...         pass
+       ...
+       ...     def reset(self):
+       ...         self.event_counter = 0
+       ...
+
+       >>> hook = PrintEventHook()
+
+       >>> isinstance(hook, ResettableHook)
+       True
+    """
 
     def reset(self) -> None:
         """Reset the internal state of the hook."""
