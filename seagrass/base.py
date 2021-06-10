@@ -111,7 +111,7 @@ the default priority ``{DEFAULT_POSTHOOK_PRIORITY=}`` is used.
 
 
 @t.runtime_checkable
-class LogResultsHook(ProtoHook[C], t.Protocol[C]):
+class LogResultsHook(t.Protocol):
     """A protocol class for hooks that support an additional `log_results` method that
     outputs the results of the hook."""
 
@@ -126,7 +126,7 @@ class LogResultsHook(ProtoHook[C], t.Protocol[C]):
 
 
 @t.runtime_checkable
-class ResettableHook(ProtoHook[C], t.Protocol[C]):
+class ResettableHook(t.Protocol):
     """A protocol class for hooks that can be reset.
 
     **Examples:** here is a minimal example of a Seagrass hook that satisfies the
