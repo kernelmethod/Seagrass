@@ -86,7 +86,7 @@ class Event:
     def add_hooks(self, *hooks: ProtoHook) -> None:
         """Add new hooks to the event.
 
-        :param ProtoHook *hooks: the hooks to add to the event.
+        :param ProtoHook hooks: the hooks to add to the event.
         """
         for hook in hooks:
             self.hooks.append(hook)
