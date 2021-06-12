@@ -64,7 +64,9 @@ class Auditor:
         self.__enabled = mode
 
     @contextmanager
-    def audit(self, reset_hooks: bool = False, log_results: bool = False) -> t.Iterator[None]:
+    def audit(
+        self, reset_hooks: bool = False, log_results: bool = False
+    ) -> t.Iterator[None]:
         """Create a new context within which the auditor is enabled. You can replicate this
         functionality by calling :py:meth:`toggle_auditing`, e.g.
 
@@ -244,6 +246,19 @@ class Auditor:
 
         if (wrapper := self.event_wrappers.get(event_name)) is not None:
             return wrapper(*args, **kwargs)
+        else:
+            raise EventNotFoundError(event_name)
+
+    def add_hooks(self, event_name: str, *hooks: ProtoHook) -> None:
+        """Add new hooks to an auditing event.
+
+        :param str event_name: the name of the event to add the hooks to.
+        :param ProtoHook hooks: the hooks that should be added to the event.
+        :raises seagrass.errors.EventNotFoundError: if the auditor can't find the event with the
+            provided name.
+        """
+        if (event := self.events.get(event_name)) is not None:
+            event.add_hooks(*hooks)
         else:
             raise EventNotFoundError(event_name)
 
