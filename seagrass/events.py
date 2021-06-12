@@ -69,7 +69,7 @@ class Event:
         self.enabled = enabled
         self.name = name
         self.raise_runtime_events = raise_runtime_events
-        self.hooks = hooks
+        self.hooks = []
 
         if prehook_audit_event_name is None:
             prehook_audit_event_name = f"prehook:{name}"
@@ -79,14 +79,32 @@ class Event:
         self.prehook_audit_event_name = prehook_audit_event_name
         self.posthook_audit_event_name = posthook_audit_event_name
 
+        self.add_hooks(*hooks)
+
         # Set the order of execution for prehooks and posthooks.
+
+    def add_hooks(self, *hooks: ProtoHook) -> None:
+        """Add new hooks to the event.
+
+        :param ProtoHook *hooks: the hooks to add to the event.
+        """
+        for hook in hooks:
+            self.hooks.append(hook)
+
+        # Since we've updated the list of hooks, we need to re-determine the order
+        # in which the hooks should be executed.
+        self._set_hook_execution_order()
+
+    def _set_hook_execution_order(self) -> None:
+        """Determine the order in which the events' hooks should be executed."""
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
         self.__prehook_execution_order = sorted(
-            range(len(hooks)), key=lambda i: (prehook_priority(hooks[i]), i)
+            range(len(self.hooks)), key=lambda i: (prehook_priority(self.hooks[i]), i)
         )
         self.__posthook_execution_order = sorted(
-            range(len(hooks)), key=lambda i: (-posthook_priority(hooks[i]), -i)
+            range(len(self.hooks)),
+            key=lambda i: (-posthook_priority(self.hooks[i]), -i),
         )
 
     def __call__(self, *args, **kwargs) -> t.Any:
