@@ -26,7 +26,7 @@ class CounterHook:
 
        >>> event_b = auditor.create_event("event_b", hooks=[hook])
 
-       >>> with auditor.audit(log_results=True):
+       >>> with auditor.start_auditing(log_results=True):
        ...     for _ in range(15):
        ...         auditor.raise_event("event_a")
        ...     for _ in range(8):
