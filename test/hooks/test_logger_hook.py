@@ -28,7 +28,7 @@ class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
     def test_hook_function(self):
         event = "test.multiply_or_add"
 
-        @self.auditor.decorate(event, hooks=[self.hook_pre, self.hook_both])
+        @self.auditor.audit(event, hooks=[self.hook_pre, self.hook_both])
         def multiply_or_add(*args, op="*"):
             if op == "*":
                 return reduce(mul, args, 1)
@@ -39,7 +39,7 @@ class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
         args = (1, 2, 3, 4)
         kwargs_add = {"op": "+"}
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             multiply_or_add(*args)
             multiply_or_add(*args, **kwargs_add)
 

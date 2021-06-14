@@ -12,15 +12,15 @@ class StackTraceHookTestCase(unittest.TestCase):
         auditor = Auditor()
         hook = StackTraceHook()
 
-        @auditor.decorate("test.foo", hooks=[hook])
+        @auditor.audit("test.foo", hooks=[hook])
         def foo():
             return
 
-        @auditor.decorate("test.bar", hooks=[hook])
+        @auditor.audit("test.bar", hooks=[hook])
         def bar():
             return foo()
 
-        with auditor.audit():
+        with auditor.start_auditing():
             foo()
             bar()
 

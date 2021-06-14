@@ -64,7 +64,7 @@ class Auditor:
         self.__enabled = mode
 
     @contextmanager
-    def audit(
+    def start_auditing(
         self, reset_hooks: bool = False, log_results: bool = False
     ) -> t.Iterator[None]:
         """Create a new context within which the auditor is enabled. You can replicate this
@@ -84,8 +84,8 @@ class Auditor:
             finally:
                 auditor.toggle_auditing(False)
 
-        However, using ``with auditor.audit()`` in place of ``auditor.toggle_auditing`` has some
-        additional benefits too, e.g. it allows you to access the logger for the most recent
+        However, using ``with auditor.start_auditing()`` in place of ``auditor.toggle_auditing`` has
+        some additional benefits too, e.g. it allows you to access the logger for the most recent
         auditing context using ``seagrass.get_audit_logger``.
 
         :param bool log_results: Log hooks results with :py:meth:`log_results` before exiting
@@ -106,22 +106,44 @@ class Auditor:
             if reset_hooks:
                 self.reset_hooks()
 
-    def wrap(
+    # Overload the audit function so that it can be called either as a decorator or as
+    # a regular function.
+
+    @t.overload
+    def audit(
         self,
-        func: F,
         event_name: str,
+        **kwargs,
+    ) -> t.Callable[[F], F]:
+        ...  # pragma: no cover
+
+    @t.overload
+    def audit(
+        self,
+        event_name: str,
+        func: F,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
     ) -> F:
-        """Wrap a function with a new auditing event.
+        ...  # pragma: no cover
 
-        :param Callable func: the function that should be wrapped in a new event.
+    def audit(
+        self,
+        event_name: str,
+        func: t.Optional[F] = None,
+        hooks: t.Optional[t.List[ProtoHook]] = None,
+        **kwargs,
+    ):
+        """Wrap a function with a new auditing event. You can call ``audit`` either as a function
+        decorator or as a regular method of :py:class:`Auditor`.
+
+        :param Optional[Callable] func: the function that should be wrapped in a new event.
         :param str event_name: the name of the new event. Event names must be unique.
         :param Optional[List[ProtoHook]] hooks: a list of hooks to call whenever the new event is
             triggered.
         :param kwargs: keyword arguments to pass on to ``Event.__init__``.
 
-        **Example:** create an event over the function ``json.dumps`` using ``wrap``:
+        **Examples:** create an event over the function ``json.dumps`` using ``wrap``:
 
         .. testsetup::
 
@@ -133,16 +155,39 @@ class Auditor:
             >>> import json
             >>> from seagrass.hooks import CounterHook
             >>> hook = CounterHook()
-            >>> audumps = auditor.wrap(json.dumps, "audit.json.dumps", hooks=[hook])
+            >>> audumps = auditor.audit("audit.json.dumps", json.dumps, hooks=[hook])
             >>> setattr(json, "dumps", audumps)
             >>> hook.event_counter["audit.json.dumps"]
             0
-            >>> with auditor.audit():
+            >>> with auditor.start_auditing():
             ...     json.dumps({"a": 1, "b": 2})
             '{"a": 1, "b": 2}'
             >>> hook.event_counter["audit.json.dumps"]
             1
+
+        Here is another example where we call ``auditor.audit`` as a decorator for a function
+        ``add``:
+
+        .. testcode::
+
+            from seagrass import Auditor
+            from seagrass.hooks import CounterHook
+            auditor = Auditor()
+
+            @auditor.audit("event.add", hooks=[CounterHook()])
+            def add(x, y):
+                return x + y
+
         """
+
+        # If func is None, we assume that audit() was called as a function decorator, and
+        # we return another decorator that can be called around the function.
+        if func is None:
+
+            def decorator(func: F):
+                return self.audit(event_name, func, hooks=hooks, **kwargs)
+
+            return decorator
 
         if event_name in self.events:
             raise ValueError(
@@ -167,29 +212,6 @@ class Auditor:
 
         self.event_wrappers[event_name] = wrapper
         return t.cast(F, wrapper)
-
-    def decorate(
-        self,
-        event_name: str,
-        **kwargs,
-    ) -> t.Callable[[F], F]:
-        """A function decorator that tells the auditor to monitor the decorated function.
-
-        .. testcode::
-
-            from seagrass import Auditor
-            from seagrass.hooks import CounterHook
-            auditor = Auditor()
-
-            @auditor.decorate("event.add", hooks=[CounterHook()])
-            def add(x, y):
-                return x + y
-        """
-
-        def wrapper(func: F):
-            return self.wrap(func, event_name, **kwargs)
-
-        return wrapper
 
     def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:
         """Create a new "empty" event. When this event is executed, it runs any hooks that are
@@ -218,13 +240,13 @@ class Auditor:
             >>> hook.event_counter["my_signal"]
             0
 
-            >>> with auditor.audit():
+            >>> with auditor.start_auditing():
             ...     auditor.raise_event("my_signal")
 
             >>> hook.event_counter["my_signal"]
             1
         """
-        return self.wrap(_empty_event_func, event_name, **kwargs)
+        return self.audit(event_name, _empty_event_func, **kwargs)
 
     def reset_hooks(self) -> None:
         """Reset all of the hooks used by this Auditor."""
@@ -279,19 +301,19 @@ class Auditor:
 
             >>> from seagrass.hooks import CounterHook
             >>> hook = CounterHook()
-            >>> @auditor.decorate("event.say_hello", hooks=[hook])
+            >>> @auditor.audit("event.say_hello", hooks=[hook])
             ... def say_hello(name):
             ...     return f"Hello, {name}!"
             >>> hook.event_counter["event.say_hello"]
             0
-            >>> with auditor.audit():
+            >>> with auditor.start_auditing():
             ...     say_hello("Alice")
             'Hello, Alice!'
             >>> hook.event_counter["event.say_hello"]
             1
             >>> # Disable the "event.say_hello" event
             >>> auditor.toggle_event("event.say_hello", False)
-            >>> with auditor.audit():
+            >>> with auditor.start_auditing():
             ...     # Since event.say_hello is disabled, the following call to
             ...     # say_hello will not contribute to its event counter.
             ...     say_hello("Bob")

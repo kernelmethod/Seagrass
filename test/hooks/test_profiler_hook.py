@@ -22,16 +22,16 @@ class ProfilerHookTestCase(HookTestCaseMixin, unittest.TestCase):
         except ImportError:
             self.skipTest("Test disabled for Python < 3.9")
 
-        # Note: could just as easily use auditor.wrap(time.sleep, ...) here
-        # but the name of time.sleep is slightly mangled in the resulting
+        # Note: could just as easily use auditor.audit("test.sleep", time.sleep, ...)
+        # here but the name of time.sleep is slightly mangled in the resulting
         # StatsProfile that we generate, which complicates testing.
-        @self.auditor.decorate("test.sleep", hooks=[self.hook])
+        @self.auditor.audit("test.sleep", hooks=[self.hook])
         def ausleep(*args):
             time.sleep(*args)
 
         self.assertEqual(self.hook.get_stats(), None)
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             for _ in range(10):
                 ausleep(0.001)
 
@@ -44,7 +44,7 @@ class ProfilerHookTestCase(HookTestCaseMixin, unittest.TestCase):
         self.hook.reset()
         self.assertEqual(self.hook.get_stats(), None)
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             ausleep(0.01)
 
         stats_profile = self.hook.get_stats().get_stats_profile()

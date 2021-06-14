@@ -18,7 +18,7 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
         return FileOpenHook(track_nested_opens=True)
 
     def test_hook_function(self):
-        @self.auditor.decorate("test.say_hello", hooks=[self.hook])
+        @self.auditor.audit("test.say_hello", hooks=[self.hook])
         def say_hello(filename, name) -> str:
             with open(filename, "w") as f:
                 f.write(f"Hello, {name}!\n")
@@ -30,7 +30,7 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
             # Even though we're using sys.audit hooks, calls to say_hello should not
             # trigger the audit hook unless we're in an auditing context.
             say_hello(f.name, "Alice")
-            with self.auditor.audit():
+            with self.auditor.start_auditing():
                 result = say_hello(f.name, "Alice")
             say_hello(f.name, "Alice")
 
@@ -53,12 +53,12 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
             self.assertEqual(len(lines), 4)
 
     def test_nested_calls_to_hooked_functions(self):
-        @self.auditor.decorate("test.readlines", hooks=[self.hook])
+        @self.auditor.audit("test.readlines", hooks=[self.hook])
         def readlines(filename):
             with open(filename, "r") as f:
                 return f.readlines()
 
-        @self.auditor.decorate("test.tabify", hooks=[self.hook])
+        @self.auditor.audit("test.tabify", hooks=[self.hook])
         def tabify(filename, outfile):
             lines = readlines(filename)
             with open(outfile, "w") as f:
@@ -67,7 +67,7 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
         with tempfile.NamedTemporaryFile() as tf1:
             with tempfile.NamedTemporaryFile() as tf2:
-                with self.auditor.audit():
+                with self.auditor.start_auditing():
                     with open(tf1.name, "w") as f:
                         f.write("hello\nworld!")
                     tabify(tf1.name, tf2.name)

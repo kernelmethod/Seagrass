@@ -25,21 +25,21 @@ class EventsTestCase(unittest.TestCase):
 
         hook = CounterHook()
 
-        @self.auditor.decorate("test.foo.get_x", hooks=[hook])
+        @self.auditor.audit("test.foo.get_x", hooks=[hook])
         def get_x(self):
             return self.__x
 
-        @self.auditor.decorate("test.foo.set_x", hooks=[hook])
+        @self.auditor.audit("test.foo.set_x", hooks=[hook])
         def set_x(self, val):
             self.__x = val
 
-        @self.auditor.decorate("test.foo.del_x", hooks=[hook])
+        @self.auditor.audit("test.foo.del_x", hooks=[hook])
         def del_x(self):
             del self.__x
 
         setattr(Foo, "x", property(fget=get_x, fset=set_x, fdel=del_x))
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             f = Foo()
             f.x = 1
             y = f.x  # noqa: F841
@@ -57,13 +57,13 @@ class EventsTestCase(unittest.TestCase):
         # Now override the add_one function belonging to Foo
         current_add_one = Foo.add_one
 
-        @self.auditor.decorate("test.foo.add_one", hooks=[hook])
+        @self.auditor.audit("test.foo.add_one", hooks=[hook])
         def add_one(self, *args, **kwargs):
             return current_add_one(self, *args, **kwargs)
 
         setattr(Foo, "add_one", add_one)
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             f = Foo()
             result = f.add_one()
 
@@ -73,15 +73,15 @@ class EventsTestCase(unittest.TestCase):
     def test_toggle_event(self):
         hook = CounterHook()
 
-        @self.auditor.decorate("test.foo", hooks=[hook])
+        @self.auditor.audit("test.foo", hooks=[hook])
         def foo():
             return
 
-        @self.auditor.decorate("test.bar", hooks=[hook])
+        @self.auditor.audit("test.bar", hooks=[hook])
         def bar():
             return foo()
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             bar()
             self.assertEqual(hook.event_counter["test.foo"], 1)
             self.assertEqual(hook.event_counter["test.bar"], 1)
@@ -100,15 +100,15 @@ class EventsTestCase(unittest.TestCase):
 
     def test_wrap_function_and_create_sys_audit_event(self):
         # We should be able to set up sys.audit events when we wrap functions
-        @self.auditor.decorate("test.foo", raise_runtime_events=True)
+        @self.auditor.audit("test.foo", raise_runtime_events=True)
         def foo(x, y, z=None):
             return x + y + (0 if z is None else z)
 
-        @self.auditor.decorate("test.bar", raise_runtime_events=False)
+        @self.auditor.audit("test.bar", raise_runtime_events=False)
         def bar(x, y, z=None):
             return x + y + (0 if z is None else z)
 
-        @self.auditor.decorate(
+        @self.auditor.audit(
             "test.baz",
             raise_runtime_events=True,
             prehook_audit_event_name="baz_prehook",
@@ -148,7 +148,7 @@ class EventsTestCase(unittest.TestCase):
         self.assertEqual(set(args_dict), set())
 
         # Now some audit events should be raised:
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             run_fns(test_args, test_kwargs)
 
         expected_prehooks = ["prehook:test.foo", "baz_prehook"]

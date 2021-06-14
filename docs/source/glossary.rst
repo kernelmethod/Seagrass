@@ -27,7 +27,7 @@ new auditing context using :py:meth:`seagrass.Auditor.audit`:
 
    auditor = seagrass.Auditor()
 
-   with auditor.audit():
+   with auditor.start_auditing():
        # Events that occur here will be audited
        ...
 
@@ -53,8 +53,8 @@ Event
 Also referred to as an *audit event*. Events (that is, instances of
 :py:class:`seagrass.events.Event`) are the basic building block for auditing
 code in Seagrass. You usually create an event with the list of hooks that you
-want to run on that event using the ``@auditor.decorate`` or ``auditor.wrap``
-methods of :py:class:`seagrass.Auditor`:
+want to run on that event using the :py:meth:`~seagrass.Auditor.audit` method of
+:py:class:`seagrass.Auditor`:
 
 .. testsetup::
 
@@ -64,20 +64,20 @@ methods of :py:class:`seagrass.Auditor`:
 
 .. testcode::
 
-   # Method 1: use @auditor.decorate to decorate a function definition.
-   # This call will create a new event called "my_foo_event" whenever
-   # we call the function foo
-   @auditor.decorate("my_foo_event", hooks=hooks)
+   # Method 1: use @auditor.audit to decorate a function definition.
+   # This call will create a new event called "my_foo_event" that gets
+   # raised whenever we call the function foo
+   @auditor.audit("my_foo_event", hooks=hooks)
    def foo(x, y):
        return x + y
 
-   # Method 2: use auditor.wrap to wrap an existing function.
-   # This call will create a new event called "my_bar_event" whenever
-   # we call the function audited_bar
+   # Method 2: use auditor.audit to wrap an existing function.
+   # This call will create a new event called "my_bar_event" that gets
+   # raised whenever we call the function audited_bar
    def bar(name):
        return f"Hello, {name}!"
 
-   audited_bar = auditor.wrap(bar, "my_bar_event", hooks=hooks)
+   audited_bar = auditor.audit("my_bar_event", bar, hooks=hooks)
 
 There are two main components to any event:
 
@@ -93,11 +93,11 @@ There are two main components to any event:
  
   .. doctest::
  
-     >>> @auditor.decorate("my_event", hooks=hooks)
+     >>> @auditor.audit("my_event", hooks=hooks)
      ... def add(x, y):
      ...     return x + y
  
-     >>> @auditor.decorate("my_event", hooks=hooks)
+     >>> @auditor.audit("my_event", hooks=hooks)
      ... def sub(x, y):
      ...     return x - y   # doctest: +IGNORE_EXCEPTION_DETAIL
      Traceback (most recent call last):

@@ -74,14 +74,14 @@ class ProfilerHook:
 
         .. _pstats.Stats: https://docs.python.org/3/library/profile.html#pstats.Stats
         """
-        if self.profile.getstats() == []:   # type: ignore
+        if self.profile.getstats() == []:  # type: ignore
             return None
         else:
             return pstats.Stats(self.profile, **kwargs)
 
     def reset(self) -> None:
         """Reset the internal profiler."""
-        self.profile.clear()    # type: ignore
+        self.profile.clear()  # type: ignore
 
     def log_results(self, logger: logging.Logger) -> None:
         """Log the results captured by ProfilerHook."""

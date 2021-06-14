@@ -22,8 +22,10 @@ class LoggingHook:
     ) -> None:
         if prehook_msg is None and posthook_msg is None:
             raise ValueError(
-                "At least one of the keyword arguments prehook_msg and posthook_msg "
-                + "must be specified and not equal to None"
+                (
+                    "At least one of the keyword arguments prehook_msg and posthook_msg "
+                    "must be specified and not equal to None"
+                )
             )
 
         self.prehook_msg = prehook_msg

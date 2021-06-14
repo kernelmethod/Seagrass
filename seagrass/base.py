@@ -30,11 +30,11 @@ class ProtoHook(t.Protocol[C]):
         ...     def posthook(self, event_name, result, context):
         ...         pass
 
-        >>> @auditor.decorate("event.say_hello", hooks=[TypeCheckHook()])
+        >>> @auditor.audit("event.say_hello", hooks=[TypeCheckHook()])
         ... def say_hello(name: str):
         ...     return f"Hello, {name}!"
 
-        >>> with auditor.audit():
+        >>> with auditor.start_auditing():
         ...     say_hello("Alice")
         ...     say_hello(0)    # Should raise AssertionError   # doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):

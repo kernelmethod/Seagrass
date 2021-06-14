@@ -55,7 +55,7 @@ can use Seagrass as a thin layer around ``sys.audit`` by passing
 
 .. testcode:: raise-runtime-events
 
-   @auditor.decorate("foo_event", raise_runtime_events=True)
+   @auditor.audit("foo_event", raise_runtime_events=True)
    def foo(x, y, z=0):
        return x + y + z
 
@@ -87,7 +87,7 @@ these events is raised, along with the arguments passed to ``sys.audit``:
 
    >>> sys.addaudithook(foo_event_hook)
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     result = foo(1, 2, z=3)
    prehook called: args=(1, 2), kwargs={'z': 3}
    posthook called: result=6

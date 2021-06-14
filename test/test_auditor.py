@@ -62,7 +62,7 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
     def test_define_new_event(self):
         # Define a new event and ensure that it gets added to the auditor's events
         # dictionary and event_wrapper dictionary
-        @self.auditor.decorate("test.foo")
+        @self.auditor.audit("test.foo")
         def foo():
             return
 
@@ -70,13 +70,13 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.assertIn("test.foo", self.auditor.event_wrappers)
 
     def test_define_two_events_with_the_same_name(self):
-        @self.auditor.decorate("test.foo")
+        @self.auditor.audit("test.foo")
         def foo_1():
             return
 
         with self.assertRaises(ValueError):
 
-            @self.auditor.decorate("test.foo")
+            @self.auditor.audit("test.foo")
             def foo_2():
                 return
 
@@ -103,7 +103,7 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.assertEqual(hook.last_prehook_args, None)
         self.assertEqual(hook.last_posthook_args, None)
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             self.auditor.raise_event("test.signal", 1, 2, name="Alice")
 
         self.assertEqual(
@@ -134,7 +134,7 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         hook = MySumHook()
         self.auditor.create_event("my_sum.cumsum", hooks=[hook])
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             my_sum(1, 2, 3, 4)
 
         self.assertEqual(hook.cumsums, [0.0, 1.0, 3.0, 6.0])

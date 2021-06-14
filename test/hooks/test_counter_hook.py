@@ -12,7 +12,7 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
     check_is_resettable_hook = True
 
     def test_hook_function(self):
-        @self.auditor.decorate("test.say_hello", hooks=[self.hook])
+        @self.auditor.audit("test.say_hello", hooks=[self.hook])
         def say_hello(name: str) -> str:
             return f"Hello, {name}!"
 
@@ -22,7 +22,7 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
         say_hello("Alice")
         self.assertEqual(self.hook.event_counter["test.say_hello"], 0)
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             for name in ("Alice", "Bob", "Cathy"):
                 say_hello(name)
         self.assertEqual(self.hook.event_counter["test.say_hello"], 3)
@@ -40,7 +40,7 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
         self.auditor.create_event("event_a", hooks=[self.hook])
         self.auditor.create_event("event_c", hooks=[self.hook])
 
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             for _ in range(904):
                 self.auditor.raise_event("event_b")
             for _ in range(441):
