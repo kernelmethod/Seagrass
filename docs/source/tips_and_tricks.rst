@@ -49,11 +49,11 @@ with the new one:
 
    >>> hooks = [PrintEventHook()]
 
-   >>> aunorm = auditor.wrap(Point2D.norm, "event.norm", hooks=hooks)
+   >>> aunorm = auditor.audit("event.norm", Point2D.norm, hooks=hooks)
 
    >>> Point2D.norm = aunorm
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     p = Point2D(3, 4)
    ...     print(f"{p.norm()=}")
    PrintEventHook: event.norm triggered
@@ -71,15 +71,15 @@ getter, setter, and deleter methods for that property.
 
    >>> getter_hooks = setter_hooks = deleter_hooks = [PrintEventHook()]
 
-   >>> @auditor.decorate("point2d.get_x", hooks=getter_hooks)
+   >>> @auditor.audit("point2d.get_x", hooks=getter_hooks)
    ... def get_x(self):
    ...     return self.__x
 
-   >>> @auditor.decorate("point2d.set_x", hooks=setter_hooks)
+   >>> @auditor.audit("point2d.set_x", hooks=setter_hooks)
    ... def set_x(self, val):
    ...     self.__x = val
 
-   >>> @auditor.decorate("point2d.del_x", hooks=deleter_hooks)
+   >>> @auditor.audit("point2d.del_x", hooks=deleter_hooks)
    ... def del_x(self):
    ...     del self.__x
 
@@ -113,7 +113,7 @@ getter, setter, and/or deleter methods of the old property.
    >>> isinstance(Point2D.tuple, property)
    True
 
-   >>> aufget = auditor.wrap(Point2D.tuple.fget, "tuple_getter", hooks=hooks)
+   >>> aufget = auditor.audit("tuple_getter", Point2D.tuple.fget, hooks=hooks)
 
    >>> new_prop = property(
    ...     fget=aufget, fset=Point2D.tuple.fset, fdel=Point2D.tuple.fdel,
@@ -121,7 +121,7 @@ getter, setter, and/or deleter methods of the old property.
 
    >>> setattr(Point2D, "tuple", new_prop)
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     p = Point2D(3, 4)
    ...     print(p.tuple)
    PrintEventHook: tuple_getter triggered
@@ -151,7 +151,7 @@ getter, setter, and/or deleter methods of the old property.
 
    .. doctest::
 
-      >>> aufget = auditor.wrap(Point2D.tuple.fget, "tuple_getter", hooks=hooks)
+      >>> aufget = auditor.audit("tuple_getter", Point2D.tuple.fget, hooks=hooks)
 
       >>> setattr(Point2D.tuple, "fget", aufget) # doctest: +IGNORE_EXCEPTION_DETAIL
       Traceback (most recent call last):

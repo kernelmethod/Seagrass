@@ -21,9 +21,9 @@ Creating a new Auditor
 You typically audit code with Seagrass in three steps:
 
 1. Create a new ``Auditor`` instance.
-2. Define new Seagrass events using ``Auditor.decorate`` or ``Auditor.wraps``.
-3. Create a new auditing context using ``auditor.audit()``, and then start
-   calling the code under audit.
+2. Define new Seagrass events using ``Auditor.audit``.
+3. Create a new auditing context using ``auditor.start_auditing()``, and then
+   start calling the code under audit.
 
 Let's look at an example. Before we start, we'll configure the logger used by
 Seagrass. Auditors default to using the ``"seagrass"`` logger, so we'll 
@@ -76,16 +76,16 @@ function called ``event.sub``.
    hook = CounterHook()
 
    # Now define some new events by hooking some example functions
-   @auditor.decorate("event.add", hooks=[hook])
+   @auditor.audit("event.add", hooks=[hook])
    def add(x: int, y: int) -> int:
        return x + y
 
-   @auditor.decorate("event.sub", hooks=[hook])
+   @auditor.audit("event.sub", hooks=[hook])
    def sub(x: int, y: int) -> int:
        return x - y
 
    # Now start auditing!
-   with auditor.audit():
+   with auditor.start_auditing():
        add(1, 2)
        add(3, 4)
        sub(5, 2)
@@ -109,9 +109,9 @@ spent in that function (as well as the number of times it gets called).
    >>> from seagrass.hooks import CounterHook, TimerHook
    >>> ch = CounterHook()
    >>> th = TimerHook()
-   >>> ausleep = auditor.wrap(time.sleep, "time.sleep", hooks=[ch,th])
+   >>> ausleep = auditor.audit("time.sleep", time.sleep, hooks=[ch,th])
    >>> time.sleep = ausleep
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     for _ in range(10):
    ...         time.sleep(0.1)
    >>> auditor.log_results()  # doctest: +SKIP
@@ -125,10 +125,10 @@ Raising audit events without wrapping functions
 -----------------------------------------------
 
 Up until this point, we've been creating audit events by calling
-:py:meth:`seagrass.Auditor.decorate` and :py:meth:`seagrass.Auditor.wrap` on a
-function that we want to audit. Sometimes, though, it doesn't make sense to
-audit an entire function; perhaps we just want to raise a signal at a single
-point in time, and have Seagrass capture information about that signal.
+:py:meth:`seagrass.Auditor.audit` function that we want to audit. Sometimes,
+though, it doesn't make sense to audit an entire function; perhaps we just want
+to raise a signal at a single point in time, and have Seagrass capture
+information about that signal.
 
 We can achieve this functionality by using
 :py:meth:`~seagrass.Auditor.create_event` and
@@ -169,7 +169,7 @@ new event ``my_sum.cumsum`` and call it at every iteration of the function
    ...         total += val
    ...     return total
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     my_sum([1, 2, 3, 4])
    (DEBUG) seagrass: cumsum=0.0
    (DEBUG) seagrass: cumsum=1.0

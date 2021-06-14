@@ -13,10 +13,10 @@ class TimerHookTestCase(HookTestCaseMixin, unittest.TestCase):
     check_is_resettable_hook = True
 
     def test_hook_function(self):
-        ausleep = self.auditor.wrap(time.sleep, "test.time.sleep", hooks=[self.hook])
+        ausleep = self.auditor.audit("test.time.sleep", time.sleep, hooks=[self.hook])
 
         ausleep(0.01)
-        with self.auditor.audit():
+        with self.auditor.start_auditing():
             ausleep(0.01)
         ausleep(0.01)
 

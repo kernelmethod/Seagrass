@@ -56,12 +56,12 @@ hook events:
 
    >>> hook = ArgsHook()
 
-   >>> @auditor.decorate("example.foo", hooks=[hook])
+   >>> @auditor.audit("example.foo", hooks=[hook])
    ... def foo(x, y, z=0):
    ...     print(f"{x + y + z = }")
    ...     return x + y + z
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     result = foo(2, -1, z=3)
    ArgsHook: prehook: event_name='example.foo', args=(2, -1), kwargs={'z': 3}
    x + y + z = 4
@@ -100,9 +100,9 @@ executing an event:
 
    >>> hook = ElapsedTimeHook()
 
-   >>> ausleep = auditor.wrap(time.sleep, "event.sleep", hooks=[hook])
+   >>> ausleep = auditor.audit("event.sleep", time.sleep, hooks=[hook])
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     ausleep(0.1)
    ElapsedTimeHook: Getting start time for event.sleep...
    ElapsedTimeHook: Time spent in event.sleep: 0.1s
@@ -120,10 +120,9 @@ hooks towards the total amount of time spent in the event.
 
 Their are two ways to change the order in which hooks are run:
 
-1. Change the order of the ``hooks`` list. When we call ``auditor.wrap`` or
-   ``auditor.decorate``, hooks that come at the end of the list have their
-   prehooks run *after* and their posthooks run *before* other events in the
-   list.
+1. Change the order of the ``hooks`` list. When we call ``auditor.audit``, hooks
+   hooks that come at the end of the list have their prehooks run *after* and
+   their posthooks run *before* other events in the list.
 
    Here's what the output looks like if we put ``ElapsedTimeHook`` after
    ``ArgsHook``:
@@ -132,9 +131,9 @@ Their are two ways to change the order in which hooks are run:
 
       >>> hooks = [ArgsHook(), ElapsedTimeHook()]
 
-      >>> ausleep = auditor.wrap(time.sleep, "sleep_ex_1", hooks=hooks)
+      >>> ausleep = auditor.audit("sleep_ex_1", time.sleep, hooks=hooks)
 
-      >>> with auditor.audit():
+      >>> with auditor.start_auditing():
       ...     ausleep(0.1)
       ArgsHook: prehook: event_name='sleep_ex_1', args=(0.1,), kwargs={}
       ElapsedTimeHook: Getting start time for sleep_ex_1...
@@ -147,9 +146,9 @@ Their are two ways to change the order in which hooks are run:
 
       >>> hooks = [ElapsedTimeHook(), ArgsHook()]
 
-      >>> ausleep = auditor.wrap(time.sleep, "sleep_ex_2", hooks=hooks)
+      >>> ausleep = auditor.audit("sleep_ex_2", time.sleep, hooks=hooks)
 
-      >>> with auditor.audit():
+      >>> with auditor.start_auditing():
       ...     ausleep(0.1)
       ElapsedTimeHook: Getting start time for sleep_ex_2...
       ArgsHook: prehook: event_name='sleep_ex_2', args=(0.1,), kwargs={}
@@ -185,9 +184,9 @@ Their are two ways to change the order in which hooks are run:
 
       >>> th.prehook_priority = 10; th.posthook_priority = 10;
 
-      >>> ausleep = auditor.wrap(time.sleep, "priority_ex_1", hooks=[th, ah])
+      >>> ausleep = auditor.audit("priority_ex_1", time.sleep, hooks=[th, ah])
 
-      >>> with auditor.audit():
+      >>> with auditor.start_auditing():
       ...     ausleep(0.1)
       ArgsHook: prehook: event_name='priority_ex_1', args=(0.1,), kwargs={}
       ElapsedTimeHook: Getting start time for priority_ex_1...
@@ -198,9 +197,9 @@ Their are two ways to change the order in which hooks are run:
 
       >>> th.prehook_priority = -10
 
-      >>> ausleep = auditor.wrap(time.sleep, "priority_ex_2", hooks=[th, ah])
+      >>> ausleep = auditor.audit("priority_ex_2", time.sleep, hooks=[th, ah])
 
-      >>> with auditor.audit():
+      >>> with auditor.start_auditing():
       ...     ausleep(0.1)
       ElapsedTimeHook: Getting start time for priority_ex_2...
       ArgsHook: prehook: event_name='priority_ex_2', args=(0.1,), kwargs={}
@@ -251,14 +250,14 @@ results from each run. Here's an example where we use
 
    >>> ev_foo = auditor.create_event("audit.foo", hooks=[hook])
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
    (INFO) seagrass: Calls to events recorded by CounterHook:
    (INFO) seagrass:     audit.foo: 1
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
@@ -274,7 +273,7 @@ to reset results between runs, we need to call ``hook.reset()``:
 
    >>> hook.reset()
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
@@ -289,7 +288,7 @@ when we leave the auditing context:
 
    >>> hook.reset()
 
-   >>> with auditor.audit(reset_hooks=True, log_results=True):
+   >>> with auditor.start_auditing(reset_hooks=True, log_results=True):
    ...     auditor.raise_event("audit.foo")
    (INFO) seagrass: Calls to events recorded by CounterHook:
    (INFO) seagrass:     audit.foo: 1
@@ -303,8 +302,8 @@ when we leave the auditing context:
 A hook that implements the :py:class:`~seagrass.base.ResettableHook` interface
 by implementing :py:meth:`~seagrass.base.ResettableHook.reset` can be reset
 using ``auditor.reset_hooks()`` or by passing ``reset_hooks=True`` into
-``auditor.audit()``. For most hooks that have some kind of mutable internal
-state, you probably want to implement this interface.
+``auditor.start_auditing()``. For most hooks that have some kind of mutable
+internal state, you probably want to implement this interface.
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :py:class:`~seagrass.base.LogResultsHook`: logging your hook's results
@@ -350,9 +349,9 @@ logged when ``auditor.log_results()`` is called.
 
    >>> hook = TotalElapsedTimeHook()
 
-   >>> time.sleep = auditor.wrap(time.sleep, "event.sleep", hooks=[hook])
+   >>> time.sleep = auditor.audit("event.sleep", time.sleep, hooks=[hook])
 
-   >>> with auditor.audit():
+   >>> with auditor.start_auditing():
    ...     time.sleep(0.1)
 
    >>> auditor.log_results()
