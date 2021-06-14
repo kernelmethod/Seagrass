@@ -227,20 +227,11 @@ results from each run. Here's an example where we use
 
 .. testsetup:: resettable-hook-example
 
-   import logging, sys
    from seagrass import Auditor
+   from seagrass._docs import configure_logging
 
-   fh = logging.StreamHandler(stream=sys.stdout)
-   fh.setLevel(logging.INFO)
-   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
-   fh.setFormatter(formatter)
-
-   logger = logging.getLogger("seagrass")
-   logger.handlers = []
-   logger.setLevel(logging.INFO)
-   logger.addHandler(fh)
-
-   auditor = Auditor(logger=logger)
+   configure_logging()
+   auditor = Auditor()
 
 .. doctest:: resettable-hook-example
 
@@ -315,19 +306,11 @@ logged when ``auditor.log_results()`` is called.
 
 .. testsetup::
 
-   import logging, sys
    from seagrass import Auditor
+   from seagrass._docs import configure_logging
 
-   fh = logging.StreamHandler(stream=sys.stdout)
-   fh.setLevel(logging.INFO)
-   formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
-   fh.setFormatter(formatter)
-
-   logger = logging.getLogger("seagrass")
-   logger.setLevel(logging.INFO)
-   logger.addHandler(fh)
-
-   auditor = Auditor(logger=logger)
+   configure_logging()
+   auditor = Auditor()
 
 .. doctest::
 

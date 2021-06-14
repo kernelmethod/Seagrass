@@ -6,6 +6,9 @@ from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
 from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
 
+# The name of the default logger used by Seagrass
+DEFAULT_LOGGER_NAME: str = "seagrass"
+
 # Global variable that keeps track of the auditor's logger for the
 # current auditing context.
 _audit_logger_stack: t.List[logging.Logger] = []
@@ -32,7 +35,7 @@ class Auditor:
     hooks: t.Set[ProtoHook]
     __enabled: bool = False
 
-    def __init__(self, logger: t.Union[str, logging.Logger] = "seagrass") -> None:
+    def __init__(self, logger: t.Union[str, logging.Logger] = DEFAULT_LOGGER_NAME) -> None:
         """Create a new Auditor instance.
 
         :param Union[str,logging.Logger] logger: The logger that this auditor should use. When set
