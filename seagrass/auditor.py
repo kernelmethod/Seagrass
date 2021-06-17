@@ -2,6 +2,7 @@ import functools
 import logging
 import typing as t
 from contextlib import contextmanager
+from contextvars import ContextVar
 from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
 from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
@@ -9,9 +10,9 @@ from seagrass.events import Event
 # The name of the default logger used by Seagrass
 DEFAULT_LOGGER_NAME: str = "seagrass"
 
-# Global variable that keeps track of the auditor's logger for the
+# A context variable that keeps track of the auditor's logger for the
 # current auditing context.
-_audit_logger_stack: t.List[logging.Logger] = []
+_current_audit_logger: ContextVar[t.Optional[logging.Logger]] = ContextVar("audit_logger", default=None)
 
 # A type variable used to represent a function that can take
 # arbitrary/unknown inputs and returns an arbitrary/unknown type
@@ -97,12 +98,12 @@ class Auditor:
             auditing context.
         """
         try:
+            token = _current_audit_logger.set(self.logger)
             self.toggle_auditing(True)
-            _audit_logger_stack.append(self.logger)
             yield None
         finally:
             self.toggle_auditing(False)
-            _audit_logger_stack.pop()
+            _current_audit_logger.reset(token)
 
             if log_results:
                 self.log_results()
@@ -346,7 +347,4 @@ def get_audit_logger() -> t.Optional[logging.Logger]:
     :return: the logger for the most recent auditing context (or ``None``).
     :rtype: Optional[logging.Logger]
     """
-    if len(_audit_logger_stack) == 0:
-        return None
-    else:
-        return _audit_logger_stack[-1]
+    return _current_audit_logger.get()
