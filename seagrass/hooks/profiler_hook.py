@@ -61,6 +61,10 @@ class ProfilerHook:
         self.profile.enable()
 
     def posthook(self, event_name: str, result: t.Any, context: None) -> None:
+        # Do nothing -- we defer disabling profiling to the cleanup stage
+        pass
+
+    def cleanup(self, event_name: str, context: None) -> None:
         # Stop profiling
         self.profile.disable()
 

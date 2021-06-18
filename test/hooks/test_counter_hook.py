@@ -1,15 +1,15 @@
 # Tests for the CounterHook auditing hook.
 
+from seagrass.base import ResettableHook, LogResultsHook
 from seagrass.hooks import CounterHook
-from test.base import HookTestCaseMixin
+from test.utils import HookTestCaseMixin
 import unittest
 
 
 class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = CounterHook
-    check_is_log_results_hook = True
-    check_is_resettable_hook = True
+    check_interfaces = (ResettableHook, LogResultsHook)
 
     def test_hook_function(self):
         @self.auditor.audit("test.say_hello", hooks=[self.hook])

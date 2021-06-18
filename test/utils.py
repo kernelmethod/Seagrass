@@ -4,7 +4,7 @@ import logging
 import typing as t
 from io import StringIO
 from seagrass import Auditor
-from seagrass.base import ProtoHook, LogResultsHook, ResettableHook
+from seagrass.base import ProtoHook
 
 
 class SeagrassTestCaseMixin:
@@ -37,8 +37,9 @@ class HookTestCaseMixin(SeagrassTestCaseMixin):
     hook: ProtoHook
     hook_gen: t.Optional[t.Callable[[], ProtoHook]] = None
 
-    check_is_log_results_hook: bool = False
-    check_is_resettable_hook: bool = False
+    # A list of all of the interfaces that the hook is expected
+    # to satisfy.
+    check_interfaces: t.Optional[t.Tuple[t.Type, ...]] = None
 
     @property
     def hook_name(self) -> str:
@@ -58,16 +59,11 @@ class HookTestCaseMixin(SeagrassTestCaseMixin):
             f"{self.hook_name} does not satisfy the ProtoHook interface",
         )
 
-        if self.check_is_log_results_hook:
-            self.assertIsInstance(
-                self.hook,
-                LogResultsHook,
-                f"{self.hook_name} does not satisfy the LogResultsHook interface",
-            )
+        interfaces = [] if self.check_interfaces is None else self.check_interfaces
 
-        if self.check_is_resettable_hook:
+        for interface in interfaces:
             self.assertIsInstance(
                 self.hook,
-                ResettableHook,
-                f"{self.hook_name} does not satisfy the ResettableHook interface",
+                interface,
+                f"{self.hook_name} does not satisfy the {interface.__name__} interface",
             )

@@ -2,15 +2,15 @@
 
 import time
 import unittest
-from test.base import HookTestCaseMixin
+from test.utils import HookTestCaseMixin
+from seagrass.base import LogResultsHook, ResettableHook
 from seagrass.hooks import TimerHook
 
 
 class TimerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     hook_gen = TimerHook
-    check_is_log_results_hook = True
-    check_is_resettable_hook = True
+    check_interfaces = (LogResultsHook, ResettableHook)
 
     def test_hook_function(self):
         ausleep = self.auditor.audit("test.time.sleep", time.sleep, hooks=[self.hook])

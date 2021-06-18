@@ -1,12 +1,13 @@
 import unittest
 from seagrass import Auditor
+from seagrass.base import ResettableHook
 from seagrass.hooks import StackTraceHook
 
 
 class StackTraceHookTestCase(unittest.TestCase):
     """Tests for the StackTraceHook auditing hook."""
 
-    check_is_resettable_hook = True
+    check_interfaces = (ResettableHook,)
 
     def test_hook_function(self):
         auditor = Auditor()

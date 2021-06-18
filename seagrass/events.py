@@ -1,9 +1,19 @@
 import sys
 import typing as t
-from seagrass.base import ProtoHook, prehook_priority, posthook_priority
+from enum import Enum, auto
+from seagrass.base import ProtoHook, CleanupHook, prehook_priority, posthook_priority
+from seagrass.errors import PosthookError
 
 # A type variable used to represent the function wrapped by an Event.
 F = t.Callable[..., t.Any]
+
+
+class _HookContext(Enum):
+    # Enum class used to represent cases where we don't have the context for a posthook
+    MISSING = auto()
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}.{self.name}>"
 
 
 class Event:
@@ -121,17 +131,50 @@ class Event:
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
-        prehook_contexts = {}
-        for hook_num in self.__prehook_execution_order:
-            hook = self.hooks[hook_num]
-            context = hook.prehook(self.name, args, kwargs)
-            prehook_contexts[hook_num] = context
+        # We use the exception_raised flag to tell us whether or not an exception was raised
+        # in the course of executing the event and the hooks. If an exception *was* raised,
+        # then we only call hooks' cleanup stages, and ignore the posthooks.
+        exception_raised = False
 
-        result = self.func(*args, **kwargs)
+        try:
+            prehook_contexts = {}
+            for hook_num in self.__prehook_execution_order:
+                hook = self.hooks[hook_num]
+                context = hook.prehook(self.name, args, kwargs)
+                prehook_contexts[hook_num] = context
 
-        for hook_num in self.__posthook_execution_order:
-            hook = self.hooks[hook_num]
-            hook.posthook(self.name, result, prehook_contexts[hook_num])
+            result = self.func(*args, **kwargs)
+
+        except Exception as ex:
+            exception_raised = True
+            raise ex
+
+        finally:
+            posthook_exceptions = []
+
+            # Execute posthooks and cleanup stages by order of their priority.
+            for hook_num in self.__posthook_execution_order:
+                # In some cases (e.g., if a prehook raises an Exception), a context may
+                # not exist for a given hook. We only execute the posthook and cleanup
+                # if a context exists.
+                context = prehook_contexts.get(hook_num, _HookContext.MISSING)
+                if context != _HookContext.MISSING:
+                    hook = self.hooks[hook_num]
+                    if not exception_raised:
+                        try:
+                            hook.posthook(self.name, result, context)
+                        except Exception as ex:
+                            posthook_exceptions.append(ex)
+                    if isinstance(hook, CleanupHook):
+                        try:
+                            hook.cleanup(self.name, context)
+                        except Exception as ex:
+                            posthook_exceptions.append(ex)
+
+            # If one or more exceptions were thrown while processing the posthooks, we now
+            # bubble up those errors.
+            if len(posthook_exceptions) > 0:
+                raise PosthookError(posthook_exceptions)
 
         if self.raise_runtime_events:
             sys.audit(self.posthook_audit_event_name, result)

@@ -162,3 +162,18 @@ class ResettableHook(t.Protocol):
 
     def reset(self) -> None:
         """Reset the internal state of the hook."""
+
+
+@t.runtime_checkable
+class CleanupHook(ProtoHook[C], t.Protocol[C]):
+    """A protocol class for hooks that have a 'cleanup' stage.
+
+    Hooks that implement this interface are unconditionally 'cleaned up' after an event if their
+    prehook was run during that event. Hooks that modify their internal state or create other
+    side effects that need to be reset after the event is finished executing should implement
+    this interface, in case an exception is thrown during the course of the event.
+    """
+
+    def cleanup(self, event_name: str, context: C):
+        """Perform the hook's cleanup stage. The ``event_name`` and ``context`` are the same as
+        those used by the ``posthook`` function."""

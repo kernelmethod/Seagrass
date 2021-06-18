@@ -5,7 +5,7 @@ import unittest
 from functools import reduce
 from operator import add, mul
 from seagrass.hooks import LoggingHook
-from test.base import HookTestCaseMixin
+from test.utils import HookTestCaseMixin
 
 
 class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
