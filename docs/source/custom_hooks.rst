@@ -216,6 +216,14 @@ All hooks are required to define the methods specified by the
 defines a few other protocols that your hook can implement to get even more
 functionality.
 
+- :py:class:`~seagrass.base.ResettableHook`: an interface that should be
+  implemented for hooks that have some kind of internal state that should be
+  able to be reset.
+- :py:class:`~seagrass.base.LogResultsHook`: an interface for hooks whose
+  results can be logged using :py:meth:`seagrass.Auditor.log_results`.
+- :py:class:`~seagrass.base.CleanupHook`: an interface for hooks that have a
+  "clean-up" stage that needs to be executed before an event is finished.
+
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :py:class:`~seagrass.base.ResettableHook`: resetting hooks with internal state
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -340,3 +348,124 @@ logged when ``auditor.log_results()`` is called.
    >>> auditor.log_results()
    (INFO) seagrass: TotalElapsedTimeHook: elapsed time: 0.1s
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+:py:class:`~seagrass.base.CleanupHook`: hooks with a cleanup stage
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some hooks may have side effects that need to be cleaned up after the hook is
+executed. For instance, here is a hook that sets the ``CURRENT_EVENT`` global
+variable to be the name of the current Seagrass event that is executing (or
+``None`` if no event is being executed):
+
+.. testsetup:: cleanup-hook-examples
+
+   from seagrass import Auditor
+   auditor = Auditor()
+
+.. doctest:: cleanup-hook-examples
+
+    >>> CURRENT_EVENT = None
+
+    >>> class BadCurrentEventHook:
+    ...      def prehook(self, event_name, args, kwargs):
+    ...          global CURRENT_EVENT
+    ...          old_event = CURRENT_EVENT
+    ...          CURRENT_EVENT = event_name
+    ...          return old_event
+    ...
+    ...      def posthook(self, event_name, result, context):
+    ...          global CURRENT_EVENT
+    ...          old_event = context
+    ...          CURRENT_EVENT = old_event
+
+    >>> hook = BadCurrentEventHook()
+
+    >>> print_event = lambda: print(f"{CURRENT_EVENT=}")
+
+    >>> foo = auditor.audit("event.foo", print_event, hooks=[hook])
+
+    >>> bar = auditor.audit("event.bar", print_event, hooks=[hook])
+
+    >>> with auditor.start_auditing():
+    ...     foo()
+    ...     bar()
+    CURRENT_EVENT='event.foo'
+    CURRENT_EVENT='event.bar'
+
+    >>> print(CURRENT_EVENT)
+    None
+
+However, what happens if an exception is raised while we're running the event
+that's being executed? In that case, the posthook never executes, and
+``CURRENT_EVENT`` doesn't get reset back to its old value:
+
+.. doctest:: cleanup-hook-examples
+
+   >>> @auditor.audit("event.baz", hooks=[hook])
+   ... def baz():
+   ...     raise RuntimeError()
+
+   >>> with auditor.start_auditing():
+   ...     baz() # doctest: +IGNORE_EXCEPTION_DETAIL
+   Traceback (most recent call last):
+   RuntimeError:
+
+   >>> print(CURRENT_EVENT)
+   event.baz
+
+
+What we should do instead is define a
+:py:meth:`~seagrass.base.CleanupHook.cleanup` method so that our hook satisfies
+the :py:class:`~seagrass.base.CleanupHook` interface, and then reset the value
+of ``CURRENT_EVENT`` in ``cleanup()``. Unlike ``posthook``, the ``cleanup``
+stage of a hook is called no matter what, so long as the hook's ``prehook`` was
+executed.
+
+
+.. testsetup:: cleanup-hook-examples-2
+
+   from seagrass import Auditor
+   auditor = Auditor()
+   CURRENT_EVENT = None
+
+.. doctest:: cleanup-hook-examples-2
+
+   >>> from seagrass.base import CleanupHook
+
+   >>> class CurrentEventHook:
+   ...      def prehook(self, event_name, args, kwargs):
+   ...          global CURRENT_EVENT
+   ...          old_event = CURRENT_EVENT
+   ...          CURRENT_EVENT = event_name
+   ...          return old_event
+   ...
+   ...      def posthook(self, event_name, result, context):
+   ...          pass
+   ...
+   ...      def cleanup(self, event_name, context):
+   ...          global CURRENT_EVENT
+   ...          old_event = context
+   ...          CURRENT_EVENT = old_event
+
+   >>> hook = CurrentEventHook()
+
+   >>> isinstance(hook, CleanupHook)
+   True
+
+By deferring the part where we reset ``CURRENT_EVENT`` to the ``cleanup``
+function, we ensure that ``CURRENT_EVENT`` will always be reset even if an
+exception is raised during the execution of the audited event:
+
+.. doctest:: cleanup-hook-examples-2
+
+   >>> @auditor.audit("event.baz", hooks=[hook])
+   ... def baz():
+   ...     raise RuntimeError()
+
+   >>> with auditor.start_auditing():
+   ...     baz() # doctest: +IGNORE_EXCEPTION_DETAIL
+   Traceback (most recent call last):
+   RuntimeError:
+
+   >>> print(CURRENT_EVENT)
+   None

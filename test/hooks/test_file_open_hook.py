@@ -2,14 +2,14 @@
 
 import tempfile
 import unittest
-from test.base import HookTestCaseMixin
+from test.utils import HookTestCaseMixin
+from seagrass.base import LogResultsHook, ResettableHook, CleanupHook
 from seagrass.hooks import FileOpenHook
 
 
 class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
-    check_is_log_results_hook = True
-    check_is_resettable_hook = True
+    check_interfaces = (LogResultsHook, ResettableHook, CleanupHook)
 
     # We set track_nested_opens = True so that if we call open() in an event that's
     # nested in another event, we will count the open() for both events.

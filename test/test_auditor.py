@@ -5,7 +5,7 @@ import unittest
 from io import StringIO
 from seagrass import Auditor
 from seagrass.errors import EventNotFoundError
-from test.base import SeagrassTestCaseMixin
+from test.utils import SeagrassTestCaseMixin
 
 
 class CreateAuditorTestCase(unittest.TestCase):

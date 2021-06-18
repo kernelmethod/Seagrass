@@ -2,14 +2,14 @@
 
 import time
 import unittest
-from test.base import HookTestCaseMixin
+from test.utils import HookTestCaseMixin
+from seagrass.base import LogResultsHook, ResettableHook, CleanupHook
 from seagrass.hooks import ProfilerHook
 
 
 class ProfilerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
-    check_is_log_results_hook = True
-    check_is_resettable_hook = True
+    check_interfaces = (LogResultsHook, ResettableHook, CleanupHook)
 
     @staticmethod
     def hook_gen():

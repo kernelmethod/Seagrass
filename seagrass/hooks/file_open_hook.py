@@ -68,6 +68,10 @@ class FileOpenHook:
         result: t.Any,
         context: None,
     ) -> None:
+        # Do nothing -- we defer fixing the __current_event_stack to the cleanup stage
+        pass
+
+    def cleanup(self, event_name: str, context: None) -> None:
         self.__current_event_stack.pop()
 
     def reset(self) -> None:
