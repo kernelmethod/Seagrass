@@ -93,9 +93,11 @@ these events is raised, along with the arguments passed to ``sys.audit``:
    posthook called: result=6
 
 Some of Seagrass's event hooks actually use runtime audit hooks internally. For
-instance, ``seagrass.hooks.FileOpenHook`` keeps track of all calls to the
-``open`` audit event that's built into Python in order to figure out what files
-are opened during an event.
+instance, :py:class:`seagrass.hooks.FileOpenHook`` keeps track of all calls to
+the ``open`` audit event that's built into Python in order to figure out what
+files are opened during a Seagrass event. Additionally, you can inherit from the
+:py:class:`seagrass.hooks.RuntimeAuditHook` abstract base class to create a hook
+whose body is executed as a runtime audit hook.
 
 .. _PEP 578: https://www.python.org/dev/peps/pep-0578/
 .. _Bypassing Python3.8 Audit Hooks: https://daddycocoaman.dev/posts/bypassing-python38-audit-hooks-part-1/
