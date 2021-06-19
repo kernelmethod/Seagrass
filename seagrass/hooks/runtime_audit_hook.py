@@ -64,7 +64,7 @@ class RuntimeAuditHook(metaclass=ABCMeta):
     _current_event: t.Optional[str]
 
     @abstractmethod
-    def sys_hook(self, event: str, args: t.Any) -> None:
+    def sys_hook(self, event: str, args: t.Tuple[t.Any, ...]) -> None:
         """The runtime auditing hook that gets executed every time sys.audit() is called.
         This must be defined in child classes of RuntimeAuditHook."""
 
@@ -111,7 +111,7 @@ class RuntimeAuditHook(metaclass=ABCMeta):
         # cases use some of the properties of the RuntimeAuditHook.
         sys.addaudithook(self._sys_hook)
 
-    def _sys_hook(self, event: str, args: t.Any) -> None:
+    def _sys_hook(self, event: str, args: t.Tuple[t.Any, ...]) -> None:
         """A wrapper around the sys_hook abstract method that first checks whether the hook
         is currently active before it executes anything. This is the function that actually
         gets added with sys.addaudithook, not sys_hook."""
