@@ -56,7 +56,6 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        print(self.auditor)
         self.hook_a = self._HookA()
         self.hook_b = self._HookB()
         self.hook_c = self._HookC()
