@@ -11,11 +11,9 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     check_interfaces = (LogResultsHook, ResettableHook, CleanupHook)
 
-    # We set track_nested_opens = True so that if we call open() in an event that's
-    # nested in another event, we will count the open() for both events.
     @staticmethod
     def hook_gen():
-        return FileOpenHook(track_nested_opens=True)
+        return FileOpenHook()
 
     def test_hook_function(self):
         @self.auditor.audit("test.say_hello", hooks=[self.hook])
@@ -53,6 +51,8 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
             self.assertEqual(len(lines), 4)
 
     def test_nested_calls_to_hooked_functions(self):
+        # Opens that occur in an event that's nested in another event should only count for
+        # the inner event, not the outer one.
         @self.auditor.audit("test.readlines", hooks=[self.hook])
         def readlines(filename):
             with open(filename, "r") as f:
@@ -83,28 +83,23 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
                 tabify_keys = list(self.hook.file_open_counter["test.tabify"].keys())
 
                 # Opened one file for reading in readlines
-                # Opened one file for writing in tabify, and since the hook was created
-                # with track_nested_opens=True, we also count the file that was read by
-                # readlines.
+                # Opened one file for writing in tabify
                 self.assertEqual(len(readlines_keys), 1)
-                self.assertEqual(len(tabify_keys), 2)
+                self.assertEqual(len(tabify_keys), 1)
 
                 # Check statistics about the file that was read
                 read_info = readlines_keys[0]
-                self.assertIn(readlines_keys[0], tabify_keys)
-
                 self.assertEqual(read_info.filename, tf1.name)
                 self.assertEqual(read_info.mode, "r")
                 self.assertEqual(
                     self.hook.file_open_counter["test.readlines"][read_info], 1
                 )
                 self.assertEqual(
-                    self.hook.file_open_counter["test.tabify"][read_info], 1
+                    self.hook.file_open_counter["test.tabify"][read_info], 0
                 )
 
                 # Check statistics about the file that was written to
-                info1, info2 = tabify_keys
-                write_info = info1 if info2 == read_info else info2
+                write_info = tabify_keys[0]
                 self.assertEqual(write_info.filename, tf2.name)
                 self.assertEqual(write_info.mode, "w")
                 self.assertEqual(
