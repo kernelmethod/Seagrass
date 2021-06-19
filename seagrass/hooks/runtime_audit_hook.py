@@ -50,7 +50,7 @@ class RuntimeAuditHook(metaclass=ABCMeta):
     """
 
     # Default value of the propagate_errors attribute
-    PROPAGATE_ERRORS_DEFAULT: t.Final[bool] = False
+    PROPAGATE_ERRORS_DEFAULT: t.Final[bool] = True
 
     # Whether to propagate errors from sys_hook.
     propagate_errors: bool = PROPAGATE_ERRORS_DEFAULT
