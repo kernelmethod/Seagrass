@@ -1,6 +1,7 @@
 # Testing utilities and base classes for testing Seagrass
 
 import logging
+import logging.config
 import typing as t
 from io import StringIO
 from seagrass import Auditor
@@ -14,17 +15,35 @@ class SeagrassTestCaseMixin:
     auditor: Auditor
 
     def setUp(self) -> None:
-        # Set up an auditor with a basic logging configuration
+        # Set up logging configuration
         self.logging_output = StringIO()
-        fh = logging.StreamHandler(self.logging_output)
-        fh.setLevel(logging.DEBUG)
 
-        formatter = logging.Formatter("(%(levelname)s) %(message)s")
-        fh.setFormatter(formatter)
+        logging.config.dictConfig({
+            "version": 1,
+            "disable_existing_loggers": True,
+            "formatters": {
+                "standard": {
+                    "format": "(%(levelname)s) %(message)s",
+                },
+            },
+            "handlers": {
+                "default": {
+                    "level": "DEBUG",
+                    "formatter": "standard",
+                    "class": "logging.StreamHandler",
+                    "stream": self.logging_output,
+                },
+            },
+            "loggers": {
+                "test.seagrass": {
+                    "handlers": ["default"],
+                    "level": "DEBUG",
+                    "propagate": False,
+                },
+            }
+        })
 
         self.logger = logging.getLogger("test.seagrass")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(fh)
 
         # Create a new auditor instance with the logger we just
         # set up
