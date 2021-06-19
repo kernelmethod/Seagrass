@@ -14,11 +14,18 @@ class SeagrassTestCaseMixin:
     logger: logging.Logger
     auditor: Auditor
 
+    # Whether to emit logs that are >= WARNING to stdout
+    log_warnings_to_stdout: bool = True
+
     def setUp(self) -> None:
         # Set up logging configuration
         self.logging_output = StringIO()
 
-        logging.config.dictConfig({
+        handlers = ["default"]
+        if self.log_warnings_to_stdout:
+            handlers.append("warnings")
+
+        config = {
             "version": 1,
             "disable_existing_loggers": True,
             "formatters": {
@@ -33,16 +40,25 @@ class SeagrassTestCaseMixin:
                     "class": "logging.StreamHandler",
                     "stream": self.logging_output,
                 },
+                # Add an additional handler for warnings that goes out to stdout. This way, if
+                # any warnings/errors show up during tests, we can view them in the test output.
+                "warnings": {
+                    "level": "WARNING",
+                    "formatter": "standard",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                },
             },
             "loggers": {
                 "test.seagrass": {
-                    "handlers": ["default"],
+                    "handlers": handlers,
                     "level": "DEBUG",
                     "propagate": False,
                 },
-            }
-        })
+            },
+        }
 
+        logging.config.dictConfig(config)
         self.logger = logging.getLogger("test.seagrass")
 
         # Create a new auditor instance with the logger we just
