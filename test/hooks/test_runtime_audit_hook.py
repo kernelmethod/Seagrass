@@ -1,5 +1,6 @@
 # Tests for the RuntimeAuditHook abstract base class.
 
+import sys
 import tempfile
 import unittest
 from seagrass.base import CleanupHook
@@ -11,7 +12,7 @@ class RuntimeHookTestCaseMixin(HookTestCaseMixin):
     check_interfaces = (CleanupHook,)
 
 
-class FileOpenRuntimeAuditTestCase(HookTestCaseMixin, unittest.TestCase):
+class FileOpenRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
     """Build an auditing hook for tracking file opens out of RuntimeAuditHook, similar to
     FileOpenHook."""
 
@@ -49,6 +50,11 @@ class FileOpenRuntimeAuditTestCase(HookTestCaseMixin, unittest.TestCase):
             self.assertEqual(self.hook.opened_filename, f.name)
             self.assertEqual(self.hook.opened_mode, "r")
 
+    def test_default_error_propagation_behavior(self):
+        self.assertEqual(
+            self.hook.propagate_errors, RuntimeAuditHook.PROPAGATE_ERRORS_DEFAULT
+        )
+
     def test_hook_works_if_an_exception_is_raised(self):
         # In the case where an exception is raised in the body of the function, the hook
         # should still work correctly.
@@ -73,6 +79,43 @@ class FileOpenRuntimeAuditTestCase(HookTestCaseMixin, unittest.TestCase):
             try_erroneous_func(f.name)
 
             self.assertEqual(self.hook.total_file_opens, 1)
+
+
+class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
+    """Tests for hook classes that inherit from RuntimeHook that raise an error in
+    their sys_hook function."""
+
+    class _Hook(RuntimeAuditHook):
+        propagate_errors: bool = False
+
+        def sys_hook(self, event, args):
+            raise ValueError("my_test_message")
+
+    hook_gen = _Hook
+
+    def setUp(self):
+        super().setUp()
+
+        @self.auditor.audit("my_event", hooks=[self.hook])
+        def my_event():
+            sys.audit("sys.my_event")
+
+        self.my_event = my_event
+
+    def test_hook_with_no_propagation(self):
+        # When error propagation is disabled, errors should instead be logged
+        with self.auditor.start_auditing():
+            self.my_event()
+        output = self.logging_output.getvalue().rstrip()
+        self.assertEqual(
+            output, "(ERROR) ValueError raised in _Hook.sys_hook: my_test_message"
+        )
+
+    def test_hook_with_propagation(self):
+        self.hook.propagate_errors = True
+        with self.auditor.start_auditing():
+            with self.assertRaises(ValueError):
+                self.my_event()
 
 
 if __name__ == "__main__":

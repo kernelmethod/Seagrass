@@ -2,7 +2,9 @@ import sys
 import typing as t
 from abc import ABCMeta, abstractmethod
 from contextvars import ContextVar, Token
+from contextlib import contextmanager
 from functools import wraps
+from seagrass import get_audit_logger
 
 # Type variable used to represent value returned from a function
 R = t.TypeVar("R")
@@ -46,6 +48,12 @@ class RuntimeAuditHook(metaclass=ABCMeta):
 
     .. _PEP 578: https://www.python.org/dev/peps/pep-0578/
     """
+
+    # Default value of the propagate_errors attribute
+    PROPAGATE_ERRORS_DEFAULT: t.Final[bool] = False
+
+    # Whether to propagate errors from sys_hook.
+    propagate_errors: bool = PROPAGATE_ERRORS_DEFAULT
 
     # A ContextVar that stores the latest event that's being executed
     _current_event_ctx: ContextVar[t.Optional[str]]
@@ -93,8 +101,10 @@ class RuntimeAuditHook(metaclass=ABCMeta):
 
         return wrapper
 
-    def __init__(self) -> None:
+    def __init__(self, propagate_errors: t.Optional[bool] = None) -> None:
         self._current_event_ctx = ContextVar("current_event", default=None)
+        if propagate_errors is not None:
+            self.propagate_errors = propagate_errors
         self._update_properties()
 
         # Add the runtime audit hook after initializing the properties since the hook will in most
@@ -106,7 +116,32 @@ class RuntimeAuditHook(metaclass=ABCMeta):
         is currently active before it executes anything. This is the function that actually
         gets added with sys.addaudithook, not sys_hook."""
         if self.is_active:
-            self.sys_hook(event, args)
+            try:
+                self.sys_hook(event, args)
+            except Exception as ex:
+                if self.propagate_errors:
+                    raise ex
+                else:
+                    if (logger := get_audit_logger()) is not None:
+                        # Temporarily disable the hook, since emitting a log could create new
+                        # runtime events. In some cases this could lead to an infinite recursion.
+                        with self._disable_runtime_hook():
+                            logger.error(
+                                "%s raised in %s.sys_hook: %s",
+                                ex.__class__.__name__,
+                                self.__class__.__name__,
+                                ex,
+                            )
+
+    @contextmanager
+    def _disable_runtime_hook(self) -> t.Iterator[None]:
+        """Temporarily the runtime hook."""
+        is_active = self._is_active
+        self._is_active = False
+        try:
+            yield None
+        finally:
+            self._is_active = is_active
 
     @_update_decorator
     def prehook(
@@ -120,3 +155,16 @@ class RuntimeAuditHook(metaclass=ABCMeta):
     @_update_decorator
     def cleanup(self, event: str, context: Token) -> None:
         self._current_event_ctx.reset(context)
+
+
+RuntimeAuditHook.__init__.__doc__ = f"""\
+Initialize the RuntimeAuditHook.
+
+:param Optional[bool] propagate_errors: if not equal to ``None``, set the ``propagate_errors``
+    attribute of the hook, which controls whether errors raised by :py:meth:`sys_hook` are
+    propagated. Hooks for which ``propagate_errors`` is ``False`` will log errors raised by
+    :py:meth:`sys_hook`, but won't raise them.
+
+    By default, ``hook.propagate_errors = {RuntimeAuditHook.PROPAGATE_ERRORS_DEFAULT}`` for
+    RuntimeAuditHooks.
+"""
