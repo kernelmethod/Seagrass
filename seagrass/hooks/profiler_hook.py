@@ -2,6 +2,7 @@ import logging
 import pstats
 import typing as t
 from io import StringIO
+from contextvars import ContextVar, Token
 from cProfile import Profile
 
 # Type alias to represent the input types that are allowed as "restrictions"
@@ -15,6 +16,7 @@ class ProfilerHook:
     profile: Profile
     sort_keys: t.Union[t.Tuple[int], t.Tuple[str, ...]]
     restrictions: t.Tuple[R, ...]
+    is_active: ContextVar[bool]
 
     # Set a high prehook_priority and posthook_priority to ensure
     # that the profiler only gets called directly before and after
@@ -53,20 +55,25 @@ class ProfilerHook:
             self.restrictions = restrictions
 
         self.profile = Profile()
+        self.is_active = ContextVar("is_active", default=False)
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
-    ) -> None:
+    ) -> Token:
         # Start profiling
+        token = self.is_active.set(True)
         self.profile.enable()
+        return token
 
-    def posthook(self, event_name: str, result: t.Any, context: None) -> None:
+    def posthook(self, event_name: str, result: t.Any, context: Token) -> None:
         # Do nothing -- we defer disabling profiling to the cleanup stage
         pass
 
-    def cleanup(self, event_name: str, context: None) -> None:
+    def cleanup(self, event_name: str, context: Token) -> None:
         # Stop profiling
-        self.profile.disable()
+        self.is_active.reset(context)
+        if not self.is_active.get():
+            self.profile.disable()
 
     def get_stats(self, **kwargs) -> t.Optional[pstats.Stats]:
         """Return the profiling statistics as a pstats.Stats class.

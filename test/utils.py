@@ -2,7 +2,9 @@
 
 import logging
 import logging.config
+import sys
 import typing as t
+from functools import wraps
 from io import StringIO
 from seagrass import Auditor
 from seagrass.base import ProtoHook
@@ -102,3 +104,45 @@ class HookTestCaseMixin(SeagrassTestCaseMixin):
                 interface,
                 f"{self.hook_name} does not satisfy the {interface.__name__} interface",
             )
+
+
+F = t.Callable[..., None]
+
+
+def req_python_version(
+    min: t.Optional[t.Tuple[int, int]] = None, max: t.Optional[t.Tuple[int, int]] = None
+) -> t.Callable[[F], F]:
+    """Create a wrapper around a unit test to enforce a minimum
+    or maximum Python version."""
+
+    assert min is not None or max is not None
+    version = sys.version_info
+
+    err_msg = f"Test skipped: disabled for Python version = {version.major}.{version.minor}.{version.micro}, required"
+    bad_version = False
+    if (min is not None and max is not None) and (version < min or max < version):
+        err_msg = f"{err_msg} {min[0]}.{min[1]} <= version <= {max[0]}.{max[1]}"
+        bad_version = True
+    elif (min is not None and max is None) and (version < min):
+        err_msg = f"{err_msg} {min[0]}.{min[1]} <= version"
+        bad_version = True
+    elif (min is None and max is not None) and (version > max):
+        err_msg = f"{err_msg} version <= {max[0]}.{max[1]}"
+        bad_version = True
+
+    if not bad_version:
+
+        def decorator(test_func: F) -> F:
+            return test_func
+
+        return decorator
+    else:
+
+        def decorator(test_func: F) -> F:
+            @wraps(test_func)
+            def wrapper(self, *args, **kwargs):
+                self.skipTest(err_msg)
+
+            return wrapper
+
+        return decorator
