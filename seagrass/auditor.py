@@ -12,7 +12,9 @@ DEFAULT_LOGGER_NAME: str = "seagrass"
 
 # A context variable that keeps track of the auditor's logger for the
 # current auditing context.
-_current_audit_logger: ContextVar[t.Optional[logging.Logger]] = ContextVar("audit_logger", default=None)
+_current_audit_logger: ContextVar[t.Optional[logging.Logger]] = ContextVar(
+    "audit_logger", default=None
+)
 
 # A type variable used to represent a function that can take
 # arbitrary/unknown inputs and returns an arbitrary/unknown type
@@ -36,7 +38,9 @@ class Auditor:
     hooks: t.Set[ProtoHook]
     __enabled: bool = False
 
-    def __init__(self, logger: t.Union[str, logging.Logger] = DEFAULT_LOGGER_NAME) -> None:
+    def __init__(
+        self, logger: t.Union[str, logging.Logger] = DEFAULT_LOGGER_NAME
+    ) -> None:
         """Create a new Auditor instance.
 
         :param Union[str,logging.Logger] logger: The logger that this auditor should use. When set
@@ -52,7 +56,7 @@ class Auditor:
         self.hooks = set()
 
     @property
-    def is_enabled(self) -> bool:
+    def enabled(self) -> bool:
         """Return whether or not the auditor is enabled.
 
         :type: bool
@@ -209,7 +213,7 @@ class Auditor:
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if not self.is_enabled:
+            if not self.enabled:
                 return new_event.func(*args, **kwargs)
             else:
                 return new_event(*args, **kwargs)

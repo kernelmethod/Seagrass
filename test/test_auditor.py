@@ -1,6 +1,7 @@
 # Tests for Auditor creation and basic functionality
 
 import logging
+import seagrass
 import unittest
 from io import StringIO
 from seagrass import Auditor, get_audit_logger
@@ -162,6 +163,23 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         # Now that we're back outside of an auditing context, get_audit_logger()
         # should once again return None.
         self.assertEqual(get_audit_logger(), None)
+
+
+class GlobalAuditorTestCase(unittest.TestCase):
+    """Tests for using the global auditor instance."""
+
+    def test_use_counter_hook_with_global_auditor(self):
+        hook = seagrass.hooks.CounterHook()
+
+        @seagrass.audit("test.foo", hooks=[hook])
+        def foo():
+            pass
+
+        with seagrass.start_auditing():
+            for _ in range(10):
+                foo()
+
+        self.assertEqual(hook.event_counter["test.foo"], 10)
 
 
 if __name__ == "__main__":
