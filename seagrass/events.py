@@ -131,10 +131,10 @@ class Event:
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
-        # We use the exception_raised flag to tell us whether or not an exception was raised
-        # in the course of executing the event and the hooks. If an exception *was* raised,
-        # then we only call hooks' cleanup stages, and ignore the posthooks.
-        exception_raised = False
+        # We use exception_raised to tell us whether or not an exception was raised in thej
+        # course of executing the event and the hooks. If an exception *was* raised, then
+        # we only call hooks' cleanup stages, and ignore the posthooks.
+        exception_raised = None
 
         try:
             prehook_contexts = {}
@@ -147,7 +147,7 @@ class Event:
             result = self.func(*args, **kwargs)
 
         except Exception as ex:
-            exception_raised = True
+            exception_raised = ex
             raise ex
 
         finally:
@@ -161,14 +161,14 @@ class Event:
                 context = prehook_contexts.get(hook_num, MISSING_CONTEXT)
                 if context != MISSING_CONTEXT:
                     hook = self.hooks[hook_num]
-                    if not exception_raised:
+                    if exception_raised is None:
                         try:
                             hook.posthook(self.name, result, context)
                         except Exception as ex:
                             posthook_exceptions.append(ex)
                     if isinstance(hook, CleanupHook):
                         try:
-                            hook.cleanup(self.name, context)
+                            hook.cleanup(self.name, context, exception_raised)
                         except Exception as ex:
                             posthook_exceptions.append(ex)
 

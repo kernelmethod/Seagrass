@@ -133,6 +133,8 @@ class CleanupHook(ProtoHook[C], t.Protocol[C]):
     this interface, in case an exception is thrown during the course of the event.
     """
 
-    def cleanup(self, event_name: str, context: C):
+    def cleanup(self, event_name: str, context: C, exception: t.Optional[Exception]):
         """Perform the hook's cleanup stage. The ``event_name`` and ``context`` are the same as
-        those used by the ``posthook`` function."""
+        those used by the ``posthook`` function. If an exception was thrown while executing the
+        event it will be provided in the ``exception`` argument, otherwise, ``exception`` will
+        be ``None``."""
