@@ -1,18 +1,26 @@
 # Tests for raising Python audit events with sys.audit through Auditors
 
+import seagrass
 import sys
 import unittest
 import warnings
 from collections import Counter, defaultdict
-from seagrass import Auditor
+from seagrass import auto
 from seagrass.hooks import CounterHook
+from test.utils import SeagrassTestCaseMixin
+
+with seagrass.create_global_auditor():
+
+    class ExampleClass:
+        # Test class used to check how functions are auto-named by Seagrass
+        @staticmethod
+        @seagrass.audit(auto)
+        def say_hello(name: str) -> str:
+            return f"Hello, {name}!"
 
 
-class EventsTestCase(unittest.TestCase):
+class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
     """Tests for events created by Seagrass."""
-
-    def setUp(self):
-        self.auditor = Auditor()
 
     def test_wrap_class_property(self):
         # Override a class property to call a hook whenever it's accessed
@@ -172,6 +180,18 @@ class EventsTestCase(unittest.TestCase):
         run_fns(test_args, test_kwargs)
         self.assertEqual(set(events_counter), set())
         self.assertEqual(set(args_dict), set())
+
+    def test_auto_name_event(self):
+        from pathlib import Path
+
+        auhome = self.auditor.audit(auto, Path.home)
+        self.assertEqual(auhome.__event_name__, "pathlib.Path.home")
+
+        # Check the name of the audited function from the ExampleClass class at
+        # the top of the file.
+        self.assertEqual(
+            ExampleClass.say_hello.__event_name__, f"{__name__}.ExampleClass.say_hello"
+        )
 
 
 if __name__ == "__main__":

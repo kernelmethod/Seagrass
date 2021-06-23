@@ -180,7 +180,7 @@ class Auditor:
     @t.overload
     def audit(
         self,
-        event_name: str,
+        event_name: t.Union[str, t.Callable[[F], str]],
         **kwargs,
     ) -> t.Callable[[F], F]:
         ...  # pragma: no cover
@@ -188,7 +188,7 @@ class Auditor:
     @t.overload
     def audit(
         self,
-        event_name: str,
+        event_name: t.Union[str, t.Callable[[F], str]],
         func: F,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
@@ -197,7 +197,7 @@ class Auditor:
 
     def audit(
         self,
-        event_name: str,
+        event_name: t.Union[str, t.Callable[[F], str]],
         func: t.Optional[F] = None,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
@@ -205,8 +205,11 @@ class Auditor:
         """Wrap a function with a new auditing event. You can call ``audit`` either as a function
         decorator or as a regular method of :py:class:`Auditor`.
 
+        :param Union[str,Callable[[F],str]] event_name: the name of the new event, which must be
+            unique. This parameter can either be a string, or it can be a function that takes the
+            audited function and creates a string from it, e.g.
+            ``event_name = lambda func: f"event.{func.__name__}"``.
         :param Optional[Callable] func: the function that should be wrapped in a new event.
-        :param str event_name: the name of the new event. Event names must be unique.
         :param Optional[List[ProtoHook]] hooks: a list of hooks to call whenever the new event is
             triggered.
         :param kwargs: keyword arguments to pass on to ``Event.__init__``.
@@ -257,6 +260,9 @@ class Auditor:
 
             return decorator
 
+        if callable(event_name):
+            event_name = event_name(func)
+
         if event_name in self.events:
             raise ValueError(
                 f"An event with the name '{event_name}' has already been defined"
@@ -277,6 +283,10 @@ class Auditor:
                 return new_event.func(*args, **kwargs)
             else:
                 return new_event(*args, **kwargs)
+
+        # Add an __event_name__ attribute to the function so that users can easily look up
+        # the name of the event. This is especially useful for events that are auto-named.
+        wrapper.__event_name__ = event_name  # type: ignore[attr-defined]
 
         self.event_wrappers[event_name] = wrapper
         return t.cast(F, wrapper)
