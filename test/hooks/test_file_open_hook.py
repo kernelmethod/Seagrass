@@ -13,7 +13,7 @@ class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     @staticmethod
     def hook_gen():
-        return FileOpenHook()
+        return FileOpenHook(traceable=True)
 
     def test_hook_function(self):
         @self.auditor.audit("test.say_hello", hooks=[self.hook])
