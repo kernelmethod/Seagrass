@@ -9,10 +9,14 @@ from types import FrameType
 _tracing_hook_exists: ContextVar[bool] = ContextVar(
     "_tracing_hook_exists", default=False
 )
-_tracing_hook: ContextVar["TracingHook"] = ContextVar("_tracing_hook")
+_tracing_hook: ContextVar[t.Optional["TracingHook.TraceFunc"]] = ContextVar(
+    "_tracing_hook", default=None
+)
+
+TracingHookContext = t.Tuple[t.Optional[str], Token, Token]
 
 
-class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
+class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
     """Abstract base class for hooks that should be set as tracing functions.
 
     **Example:** the code snippet below defines a new hook from
@@ -45,9 +49,8 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
         ...     MY_VAR = 100
         ...     MY_VAR = "hello, world!"
 
-        >>> with hook:
-        ...     with seagrass.start_auditing():
-        ...         example()
+        >>> with seagrass.start_auditing():
+        ...     example()
         (INFO) seagrass: Found MY_VAR=100
         (INFO) seagrass: Found MY_VAR='hello, world!'
     """
@@ -59,13 +62,13 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
         def __call__(
             self, frame: FrameType, event: str, arg: t.Any
         ) -> t.Optional["TracingHook.TraceFunc"]:
-            ...
+            ...  # pragma: no cover
 
     @abstractmethod
     def tracefunc(
         self, frame: FrameType, event: str, arg: t.Any
     ) -> t.Optional[TraceFunc]:
-        ...
+        ...  # pragma: no cover
 
     # High prehook/posthook priority since we generally don't want to trace other
     # Seagrass hooks
@@ -74,8 +77,6 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
 
     __current_event: t.Optional[str] = None
     __is_active: bool = False
-    __is_current_hook_token: t.Optional[Token] = None
-    __old_hook_token: t.Optional[Token] = None
 
     @property
     def is_active(self) -> bool:
@@ -88,57 +89,10 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
         """Return the current Seagrass event that is being executed."""
         return self.__current_event
 
-    @property
-    def is_current_tracing_hook(self) -> bool:
-        """Returns True if this hook is the current global TracingHook."""
-        if self.__is_current_hook_token is None:
-            return False
-        else:
-            return t.cast(bool, self.__is_current_hook_token.old_value)
-
     @staticmethod
     def get_current_tracing_hook():
         """Get the current global tracing hook."""
         return _tracing_hook.get()
-
-    def __enter__(self) -> "TracingHook":
-        """Make the hook the current tracing hook. Only one TracingHook can be active at a time."""
-        self.set_trace()
-        return self
-
-    def __exit__(self, *args) -> None:
-        self.remove_trace()
-
-    def __del__(self) -> None:
-        self.remove_trace()
-
-    def set_trace(self) -> None:
-        """Make this hook the current tracing hook."""
-
-        if self.__is_current_hook_token is not None:
-            return
-
-        if _tracing_hook_exists.get():
-            raise ValueError("Only one TracingHook can exist at a time")
-
-        self.__is_current_hook_token = _tracing_hook_exists.set(True)
-        self.__old_hook_token = _tracing_hook.set(self)
-        sys.settrace(self.__tracefunc)
-
-    def remove_trace(self) -> None:
-        """Stop using this hook as the current tracing hook."""
-
-        if self.__is_current_hook_token is not None:
-            _tracing_hook_exists.reset(self.__is_current_hook_token)
-
-        if self.__old_hook_token is not None:
-            _tracing_hook.reset(self.__old_hook_token)
-
-        if self.is_current_tracing_hook:
-            sys.settrace(None)
-
-        self.__is_current_hook_token = None
-        self.__old_hook_token = None
 
     def __tracefunc(
         self, frame: FrameType, event: str, arg: t.Any
@@ -152,17 +106,37 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
-    ) -> t.Optional[str]:
+    ) -> TracingHookContext:
+
+        # Check whether another TracingHook is already active
+        exists_token = _tracing_hook_exists.set(True)
+        if exists_token.old_value != Token.MISSING and not self.is_active:
+            _tracing_hook_exists.reset(exists_token)
+            current_hook = _tracing_hook.get()
+            raise ValueError(
+                f"Only one TracingHook can be active at a time (current tracing hook = {current_hook!r})"
+            )
+
+        tracefunc_token = _tracing_hook.set(self.__tracefunc)
         old_event = self.__current_event
         self.__current_event = event_name
         self.__is_active = True
-        return old_event
+
+        sys.settrace(_tracing_hook.get())
+
+        return old_event, exists_token, tracefunc_token
 
     def cleanup(
-        self, event_name: str, context: t.Optional[str], exc: t.Optional[Exception]
+        self, event_name: str, context: TracingHookContext, exc: t.Optional[Exception]
     ) -> None:
-        self.__current_event = context
+        old_event, exists_token, tracefunc_token = context
+
+        self.__current_event = old_event
         self.__is_active = self.current_event is not None
+        _tracing_hook_exists.reset(exists_token)
+        _tracing_hook.reset(tracefunc_token)
+
+        sys.settrace(_tracing_hook.get())
 
 
 TracingHook.tracefunc.__doc__ = TracingHook.TraceFunc.__doc__
