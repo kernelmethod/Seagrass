@@ -39,9 +39,11 @@ with the new one:
 
    >>> from seagrass import Auditor
 
+   >>> from seagrass.base import ProtoHook
+
    >>> auditor = Auditor()
 
-   >>> class PrintEventHook:
+   >>> class PrintEventHook(ProtoHook[None]):
    ...     def prehook(self, event, args, kwargs):
    ...         print(f"{self.__class__.__name__}: {event} triggered")
    ...     def posthook(self, event, result, context):

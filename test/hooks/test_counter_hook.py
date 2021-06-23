@@ -40,7 +40,7 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
         self.auditor.create_event("event_a", hooks=[self.hook])
         self.auditor.create_event("event_c", hooks=[self.hook])
 
-        with self.auditor.start_auditing():
+        with self.auditor.start_auditing(log_results=True):
             for _ in range(904):
                 self.auditor.raise_event("event_b")
             for _ in range(441):
@@ -48,13 +48,25 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
             for _ in range(58):
                 self.auditor.raise_event("event_c")
 
-        self.auditor.log_results()
         lines = self.logging_output.getvalue().rstrip().split("\n")
         self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], "(INFO) Calls to events recorded by CounterHook:")
         self.assertEqual(lines[1], "(INFO)     event_a: 441")
         self.assertEqual(lines[2], "(INFO)     event_b: 904")
         self.assertEqual(lines[3], "(INFO)     event_c: 58")
+
+    def test_disable_counter_hook(self):
+        self.auditor.create_event("my_event", hooks=[self.hook])
+
+        with self.auditor.start_auditing(reset_hooks=True):
+            self.auditor.raise_event("my_event")
+            self.assertEqual(self.hook.event_counter["my_event"], 1)
+
+        self.hook.enabled = False
+
+        with self.auditor.start_auditing(reset_hooks=True):
+            self.auditor.raise_event("my_event")
+            self.assertEqual(self.hook.event_counter["my_event"], 0)
 
 
 if __name__ == "__main__":

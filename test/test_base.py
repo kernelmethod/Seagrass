@@ -11,7 +11,7 @@ class CustomHookImplementationTestCase(unittest.TestCase):
         self.CheckableProtoHook = t.runtime_checkable(base.ProtoHook)
 
     def test_get_prehook_and_posthook_priority(self):
-        class MyHook:
+        class MyHook(base.ProtoHook[None]):
             prehook_priority: int = 7
 
             def prehook(self, *args):
@@ -26,17 +26,8 @@ class CustomHookImplementationTestCase(unittest.TestCase):
             self.CheckableProtoHook,
             f"{hook.__class__.__name__} does not satisfy the hooking protocol",
         )
-        self.assertEqual(base.prehook_priority(hook), 7)
-        self.assertEqual(base.posthook_priority(hook), base.DEFAULT_POSTHOOK_PRIORITY)
-
-        # The prehook_priority and posthook_priority are both required to be integers
-        hook.prehook_priority = "Alice"
-        with self.assertRaises(TypeError):
-            base.prehook_priority(hook)
-
-        hook.posthook_priority = None
-        with self.assertRaises(TypeError):
-            base.posthook_priority(hook)
+        self.assertEqual(hook.prehook_priority, 7)
+        self.assertEqual(hook.posthook_priority, base.DEFAULT_POSTHOOK_PRIORITY)
 
 
 if __name__ == "__main__":

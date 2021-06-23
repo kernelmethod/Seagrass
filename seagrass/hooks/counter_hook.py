@@ -1,9 +1,10 @@
 import logging
 import typing as t
 from collections import Counter
+from seagrass.base import ProtoHook
 
 
-class CounterHook:
+class CounterHook(ProtoHook[None]):
     """A Seagrass hook that counts the number of times an event occurs.
 
     **Examples:**
@@ -45,10 +46,6 @@ class CounterHook:
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
     ) -> None:
         self.event_counter[event_name] += 1
-
-    def posthook(self, event_name: str, result: t.Any, context: None) -> None:
-        # Posthook does nothing
-        pass
 
     def reset(self) -> None:
         self.event_counter.clear()
