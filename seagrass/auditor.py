@@ -89,7 +89,7 @@ class Auditor:
 
             >>> hook = LoggingHook(prehook_msg = lambda event, *args: f"{event} called")
 
-            >>> auditor.create_event("example.foo", hooks=[hook])
+            >>> _ = auditor.create_event("example.foo", hooks=[hook])
 
             >>> with auditor.start_auditing():
             ...     auditor.raise_event("example.foo")
