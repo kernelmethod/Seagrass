@@ -30,17 +30,15 @@ _EXPORTED_AUDITOR_ATTRIBUTES = [
 ]
 
 
-def _global_auditor_attrs():
-    # Collect the exported attributes of the current global auditor into a dictionary
-    auditor = global_auditor()
-    return dict((attr, getattr(auditor, attr)) for attr in _EXPORTED_AUDITOR_ATTRIBUTES)
-
-
 # Create context variables to cache attributes that we've already looked up on the auditor. This makes
 # lookups on module attributes a bit faster.
-_GLOBAL_AUDITOR_ATTRS: ContextVar[t.Dict[str, t.Any]] = ContextVar(
-    "_GLOBAL_AUDITOR_ATTRS", default=_global_auditor_attrs()
-)
+_GLOBAL_AUDITOR_ATTRS: t.Dict[str, ContextVar[t.Any]] = {}
+
+for attr in _EXPORTED_AUDITOR_ATTRIBUTES:
+    attr_var = ContextVar(
+        f"_GLOBAL_AUDITOR.{attr}", default=getattr(_GLOBAL_AUDITOR.get(), attr)
+    )
+    _GLOBAL_AUDITOR_ATTRS[attr] = attr_var
 
 
 class create_global_auditor(t.ContextManager[Auditor]):
@@ -83,12 +81,15 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
     def __enter__(self) -> Auditor:
         self.auditor_token = _GLOBAL_AUDITOR.set(self.new_auditor)
-        self.attrs_token = _GLOBAL_AUDITOR_ATTRS.set(_global_auditor_attrs())
+        self.attr_tokens = {}
+        for (attr, var) in _GLOBAL_AUDITOR_ATTRS.items():
+            self.attr_tokens[attr] = var.set(getattr(self.new_auditor, attr))
         return self.new_auditor
 
     def __exit__(self, *args) -> None:
         _GLOBAL_AUDITOR.reset(self.auditor_token)
-        _GLOBAL_AUDITOR_ATTRS.reset(self.attrs_token)
+        for (attr, token) in self.attr_tokens.items():
+            _GLOBAL_AUDITOR_ATTRS[attr].reset(token)
 
 
 __all__ = [
@@ -103,7 +104,7 @@ __all__ += _EXPORTED_AUDITOR_ATTRIBUTES
 
 def __getattr__(attr: str) -> t.Any:
     if (auditor_attr := _GLOBAL_AUDITOR_ATTRS.get(attr)) is not None:
-        return auditor_attr
+        return auditor_attr.get()
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")
 
