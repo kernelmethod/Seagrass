@@ -1,6 +1,5 @@
 import sys
 import typing as t
-from enum import Enum, auto
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 
@@ -8,12 +7,14 @@ from seagrass.errors import PosthookError
 F = t.Callable[..., t.Any]
 
 
-class _HookContext(Enum):
-    # Enum class used to represent cases where we don't have the context for a posthook
-    MISSING = auto()
+class __MissingHookContext:
+    __slots__: t.List[str] = []
 
     def __repr__(self):
-        return f"<{self.__class__.__name__}.{self.name}>"
+        return "<Event.MISSING_CONTEXT>"
+
+
+MISSING_CONTEXT: t.Final[__MissingHookContext] = __MissingHookContext()
 
 
 class Event:
@@ -113,8 +114,7 @@ class Event:
             range(len(self.hooks)), key=lambda i: (self.hooks[i].prehook_priority, i)
         )
         self.__posthook_execution_order = sorted(
-            range(len(self.hooks)),
-            key=lambda i: (-self.hooks[i].posthook_priority, -i)
+            range(len(self.hooks)), key=lambda i: (-self.hooks[i].posthook_priority, -i)
         )
 
     def __call__(self, *args, **kwargs) -> t.Any:
@@ -140,8 +140,9 @@ class Event:
             prehook_contexts = {}
             for hook_num in self.__prehook_execution_order:
                 hook = self.hooks[hook_num]
-                context = hook.prehook(self.name, args, kwargs)
-                prehook_contexts[hook_num] = context
+                if hook.enabled:
+                    context = hook.prehook(self.name, args, kwargs)
+                    prehook_contexts[hook_num] = context
 
             result = self.func(*args, **kwargs)
 
@@ -157,8 +158,8 @@ class Event:
                 # In some cases (e.g., if a prehook raises an Exception), a context may
                 # not exist for a given hook. We only execute the posthook and cleanup
                 # if a context exists.
-                context = prehook_contexts.get(hook_num, _HookContext.MISSING)
-                if context != _HookContext.MISSING:
+                context = prehook_contexts.get(hook_num, MISSING_CONTEXT)
+                if context != MISSING_CONTEXT:
                     hook = self.hooks[hook_num]
                     if not exception_raised:
                         try:
