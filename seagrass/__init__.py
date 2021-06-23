@@ -15,6 +15,39 @@ def global_auditor() -> Auditor:
     return _GLOBAL_AUDITOR.get()
 
 
+def auto(func: t.Callable) -> str:
+    """Automatically generate an event name for a function being audited.
+
+    **Examples:**
+
+        .. testsetup:: auto-doctests
+
+            from seagrass import Auditor
+            from seagrass._docs import configure_logging
+            configure_logging()
+            auditor = Auditor()
+
+        .. doctest:: auto-doctests
+
+            >>> from seagrass import auto
+
+            >>> from time import sleep
+
+            >>> event = auditor.audit(auto, sleep)
+
+            >>> event.__event_name__
+            'time.sleep'
+
+            >>> from pathlib import Path
+
+            >>> event = auditor.audit(auto, Path.home)
+
+            >>> event.__event_name__
+            'pathlib.Path.home'
+    """
+    return f"{func.__module__}.{func.__qualname__}"
+
+
 # Export parts of the external API of the global Auditor instance from the module
 _EXPORTED_AUDITOR_ATTRIBUTES = [
     "audit",
@@ -97,6 +130,7 @@ __all__ = [
     "get_audit_logger",
     "global_auditor",
     "create_global_auditor",
+    "auto",
 ]
 
 __all__ += _EXPORTED_AUDITOR_ATTRIBUTES

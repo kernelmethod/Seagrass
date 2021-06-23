@@ -162,3 +162,61 @@ getter, setter, and/or deleter methods of the old property.
    As a result, we have to take the more indirect route of defining a new
    property that uses the wrapped getter method, and then override the original
    ``tuple`` property with the new one.
+
+---------------------------
+Automatically naming events
+---------------------------
+
+If you're trying to instrument a large number of functions, it can be a hassle
+to try and create event names for all of them. To work around this, you can get
+Seagrass to automatically create names using the :py:func:`seagrass.auto`
+function:
+
+   .. testsetup:: tips-and-tricks-autonaming-events
+
+      from seagrass._docs import configure_logging
+      configure_logging()
+
+   .. doctest:: tips-and-tricks-autonaming-events
+
+      >>> import time
+
+      >>> from seagrass import Auditor, auto
+
+      >>> from seagrass.base import ProtoHook
+
+      >>> class PrintHook(ProtoHook):
+      ...     def prehook(self, event, args, kwargs):
+      ...         print(f"{event=!r} raised")
+
+      >>> auditor = Auditor()
+
+      >>> ausleep = auditor.audit(auto, time.sleep, hooks=[PrintHook()])
+
+      >>> ausleep.__event_name__
+      'time.sleep'
+
+      >>> with auditor.start_auditing():
+      ...     ausleep(0.0)
+      event='time.sleep' raised
+
+As you can see, Seagrass will automatically create a new event whose name is
+based on the name and module of the instrumented function.
+
+You can customize how functions are named by modifying the function you pass in
+to :py:meth:`~seagrass.Auditor.audit`. For instance, if you wanted to have the
+name of the event be ``"event:"`` plus the qualified path to the function, you
+could do
+
+   .. doctest:: tips-and-tricks-autonaming-events
+
+      >>> event_name = lambda func: "event:" + auto(func)
+
+      >>> ausleep = auditor.audit(event_name, time.sleep, hooks=[PrintHook()])
+
+      >>> ausleep.__event_name__
+      'event:time.sleep'
+
+      >>> with auditor.start_auditing():
+      ...     ausleep(0.0)
+      event='event:time.sleep' raised
