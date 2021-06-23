@@ -74,8 +74,8 @@ class TracingHook(CleanupHook[t.Optional[str]], metaclass=ABCMeta):
 
     __current_event: t.Optional[str] = None
     __is_active: bool = False
-    __is_current_hook_token: t.Optional[Token[bool]] = None
-    __old_hook_token: t.Optional[Token["TracingHook"]] = None
+    __is_current_hook_token: t.Optional[Token] = None
+    __old_hook_token: t.Optional[Token] = None
 
     @property
     def is_active(self) -> bool:
