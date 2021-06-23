@@ -73,6 +73,7 @@ __EXPORTED_AUDITOR_FUNCTIONS = set(
         "add_hooks",
         "reset_hooks",
         "log_results",
+        "logger",
     ]
 )
 
