@@ -126,6 +126,7 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
 
 __all__ = [
+    "DEFAULT_LOGGER_NAME",
     "Auditor",
     "get_audit_logger",
     "global_auditor",

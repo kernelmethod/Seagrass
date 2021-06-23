@@ -8,7 +8,7 @@ from seagrass.errors import EventNotFoundError
 from seagrass.events import Event
 
 # The name of the default logger used by Seagrass
-DEFAULT_LOGGER_NAME: str = "seagrass"
+DEFAULT_LOGGER_NAME: t.Final[str] = "seagrass"
 
 # A context variable that keeps track of the auditor's logger for the
 # current auditing context.
