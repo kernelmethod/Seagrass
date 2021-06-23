@@ -1,7 +1,7 @@
 # Tests for hook satisfying the CleanupHook interface.
 
 import unittest
-from seagrass.base import CleanupHook, ResettableHook
+from seagrass.base import ProtoHook, CleanupHook, ResettableHook
 from seagrass.errors import PosthookError
 from test.utils import SeagrassTestCaseMixin
 
@@ -10,7 +10,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
     """Tests to check that the cleanup stage of hooks that satisfy the CleanupHook interface
     is unconditionally executed."""
 
-    class _BaseTestHook:
+    class _BaseTestHook(ProtoHook[None]):
         def __init__(self):
             self.reset()
 

@@ -4,9 +4,10 @@ import logging
 import time
 import typing as t
 from collections import defaultdict
+from seagrass.base import ProtoHook
 
 
-class TimerHook:
+class TimerHook(ProtoHook[float]):
 
     # Relatively high prehook/posthook priority so that TimerHook gets
     # called soon before and after a wrapped function.

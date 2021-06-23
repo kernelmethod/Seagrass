@@ -5,6 +5,7 @@ import seagrass
 import unittest
 from io import StringIO
 from seagrass import Auditor, get_audit_logger
+from seagrass.base import ProtoHook
 from seagrass.errors import EventNotFoundError
 from test.utils import SeagrassTestCaseMixin
 
@@ -86,7 +87,7 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         with self.assertRaises(EventNotFoundError):
             self.auditor.raise_event("test.signal", 1, 2, name="Alice")
 
-        class TestHook:
+        class TestHook(ProtoHook):
             def __init__(self):
                 self.last_prehook_args = self.last_posthook_args = None
 
@@ -122,7 +123,7 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                 self.auditor.raise_event("my_sum.cumsum", total)
                 total += arg
 
-        class MySumHook:
+        class MySumHook(ProtoHook[None]):
             def __init__(self):
                 self.cumsums = []
 

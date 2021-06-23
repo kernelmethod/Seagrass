@@ -2,21 +2,21 @@ import logging
 import pstats
 import typing as t
 from io import StringIO
-from contextvars import ContextVar, Token
 from cProfile import Profile
+from seagrass.base import ProtoHook
 
 # Type alias to represent the input types that are allowed as "restrictions"
 R = t.Union[str, int, float]
 
 
-class ProfilerHook:
+class ProfilerHook(ProtoHook[bool]):
     """A Seagrass hook that uses the built-in cProfile module to collect and log performance
     statistics on events."""
 
     profile: Profile
     sort_keys: t.Union[t.Tuple[int], t.Tuple[str, ...]]
     restrictions: t.Tuple[R, ...]
-    is_active: ContextVar[bool]
+    is_active: bool = True
 
     # Set a high prehook_priority and posthook_priority to ensure
     # that the profiler only gets called directly before and after
@@ -55,24 +55,20 @@ class ProfilerHook:
             self.restrictions = restrictions
 
         self.profile = Profile()
-        self.is_active = ContextVar("is_active", default=False)
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
-    ) -> Token:
+    ) -> bool:
         # Start profiling
-        token = self.is_active.set(True)
+        was_active = self.is_active
+        self.is_active = True
         self.profile.enable()
-        return token
+        return was_active
 
-    def posthook(self, event_name: str, result: t.Any, context: Token) -> None:
-        # Do nothing -- we defer disabling profiling to the cleanup stage
-        pass
-
-    def cleanup(self, event_name: str, context: Token) -> None:
+    def cleanup(self, event_name: str, context: bool) -> None:
         # Stop profiling
-        self.is_active.reset(context)
-        if not self.is_active.get():
+        self.is_active = context
+        if not self.is_active:
             self.profile.disable()
 
     def get_stats(self, **kwargs) -> t.Optional[pstats.Stats]:

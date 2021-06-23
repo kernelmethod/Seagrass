@@ -5,8 +5,10 @@ Creating custom hooks
 =====================
 
 A Seagrass audit hook is just a class satisfying the
-:py:class:`seagrass.base.ProtoHook` interface. Here is a basic example of a hook
-that just prints the arguments given to the
+:py:class:`seagrass.base.ProtoHook` interface. The easiest way to do this is to
+create a new class that inherits from :py:class:`~seagrass.base.ProtoHook`.
+
+Here is a basic example of a hook that just prints the arguments given to the
 :py:meth:`~seagrass.base.ProtoHook.prehook` and
 :py:meth:`~seagrass.base.ProtoHook.posthook` methods:
 
@@ -14,8 +16,9 @@ that just prints the arguments given to the
 
    import time
    from seagrass import Auditor
+   from seagrass.base import ProtoHook
 
-   class ArgsHook:
+   class ArgsHook(ProtoHook[None]):
        
        def prehook(self, event_name, args, kwargs):
            print(f"ArgsHook: prehook: {event_name=}, {args=}, {kwargs=}")
@@ -23,7 +26,7 @@ that just prints the arguments given to the
        def posthook(self, event_name, result, context):
            print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
 
-   class ElapsedTimeHook:
+   class ElapsedTimeHook(ProtoHook[float]):
        def prehook(self, event_name, args, kwargs) -> float:
            print(f"ElapsedTimeHook: Getting start time for {event_name}...")
            return time.time()
@@ -37,13 +40,19 @@ that just prints the arguments given to the
 
 .. testcode::
 
-   class ArgsHook:
+   from seagrass.base import ProtoHook
+
+   class ArgsHook(ProtoHook[None]):
        
-       def prehook(self, event_name, args, kwargs):
+       def prehook(self, event_name, args, kwargs) -> None:
            print(f"ArgsHook: prehook: {event_name=}, {args=}, {kwargs=}")
 
-       def posthook(self, event_name, result, context):
+       def posthook(self, event_name, result, context: None):
            print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
+
+If you're using a typechecker like mypy, note that the type argument to
+``ProtoHook`` is the type of the context returned by ``prehook`` (and used by
+``posthook``).
 
 This class satisfies the ``ProtoHook`` interface, so we can start using it to
 hook events:
@@ -87,7 +96,7 @@ executing an event:
 
    >>> import time
 
-   >>> class ElapsedTimeHook:
+   >>> class ElapsedTimeHook(ProtoHook[float]):
    ...     def prehook(self, event_name, args, kwargs) -> float:
    ...         print(f"ElapsedTimeHook: Getting start time for {event_name}...")
    ...         return time.time()
@@ -315,6 +324,7 @@ logged when ``auditor.log_results()`` is called.
 .. testsetup::
 
    from seagrass import Auditor
+   from seagrass.base import ProtoHook
    from seagrass._docs import configure_logging
 
    configure_logging()
@@ -324,7 +334,7 @@ logged when ``auditor.log_results()`` is called.
 
    >>> import time
 
-   >>> class TotalElapsedTimeHook:
+   >>> class TotalElapsedTimeHook(ProtoHook[float]):
    ...      def __init__(self):
    ...          self.ctr = 0.
    ...
@@ -364,16 +374,20 @@ variable to be the name of the current Seagrass event that is executing (or
 
 .. doctest:: cleanup-hook-examples
 
-    >>> CURRENT_EVENT = None
+    >>> from seagrass.base import ProtoHook
 
-    >>> class BadCurrentEventHook:
-    ...      def prehook(self, event_name, args, kwargs):
+    >>> import typing as t
+
+    >>> CURRENT_EVENT: t.Optional[str] = None
+
+    >>> class BadCurrentEventHook(ProtoHook[t.Optional[str]]):
+    ...      def prehook(self, event_name, args, kwargs) -> t.Optional[str]:
     ...          global CURRENT_EVENT
     ...          old_event = CURRENT_EVENT
     ...          CURRENT_EVENT = event_name
     ...          return old_event
     ...
-    ...      def posthook(self, event_name, result, context):
+    ...      def posthook(self, event_name, result, context: t.Optional[str]):
     ...          global CURRENT_EVENT
     ...          old_event = context
     ...          CURRENT_EVENT = old_event
@@ -424,25 +438,23 @@ executed.
 
 .. testsetup:: cleanup-hook-examples-2
 
-   from seagrass import Auditor
-   auditor = Auditor()
+   import typing as t
    CURRENT_EVENT = None
 
 .. doctest:: cleanup-hook-examples-2
 
-   >>> from seagrass.base import CleanupHook
+   >>> import seagrass
 
-   >>> class CurrentEventHook:
-   ...      def prehook(self, event_name, args, kwargs):
+   >>> from seagrass.base import ProtoHook, CleanupHook
+
+   >>> class CurrentEventHook(ProtoHook[t.Optional[str]]):
+   ...      def prehook(self, event_name, args, kwargs) -> t.Optional[str]:
    ...          global CURRENT_EVENT
    ...          old_event = CURRENT_EVENT
    ...          CURRENT_EVENT = event_name
    ...          return old_event
    ...
-   ...      def posthook(self, event_name, result, context):
-   ...          pass
-   ...
-   ...      def cleanup(self, event_name, context):
+   ...      def cleanup(self, event_name, context: t.Optional[str]):
    ...          global CURRENT_EVENT
    ...          old_event = context
    ...          CURRENT_EVENT = old_event
@@ -458,11 +470,13 @@ exception is raised during the execution of the audited event:
 
 .. doctest:: cleanup-hook-examples-2
 
-   >>> @auditor.audit("event.baz", hooks=[hook])
+   >>> import seagrass
+
+   >>> @seagrass.audit("event.baz", hooks=[hook])
    ... def baz():
    ...     raise RuntimeError()
 
-   >>> with auditor.start_auditing():
+   >>> with seagrass.start_auditing():
    ...     baz() # doctest: +IGNORE_EXCEPTION_DETAIL
    Traceback (most recent call last):
    RuntimeError:

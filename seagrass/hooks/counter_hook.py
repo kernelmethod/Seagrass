@@ -1,9 +1,10 @@
 import logging
 import typing as t
 from collections import Counter
+from seagrass.base import ProtoHook
 
 
-class CounterHook:
+class CounterHook(ProtoHook[None]):
     """A Seagrass hook that counts the number of times an event occurs.
 
     **Examples:**

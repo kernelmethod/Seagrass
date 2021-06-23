@@ -1,7 +1,7 @@
 import sys
 import typing as t
 from enum import Enum, auto
-from seagrass.base import ProtoHook, CleanupHook, prehook_priority, posthook_priority
+from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 
 # A type variable used to represent the function wrapped by an Event.
@@ -110,11 +110,11 @@ class Event:
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
         self.__prehook_execution_order = sorted(
-            range(len(self.hooks)), key=lambda i: (prehook_priority(self.hooks[i]), i)
+            range(len(self.hooks)), key=lambda i: (self.hooks[i].prehook_priority, i)
         )
         self.__posthook_execution_order = sorted(
             range(len(self.hooks)),
-            key=lambda i: (-posthook_priority(self.hooks[i]), -i),
+            key=lambda i: (-self.hooks[i].posthook_priority, -i)
         )
 
     def __call__(self, *args, **kwargs) -> t.Any:

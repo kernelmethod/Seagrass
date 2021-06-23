@@ -4,12 +4,13 @@ from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from functools import wraps
 from seagrass import get_audit_logger
+from seagrass.base import ProtoHook
 
 # Type variable used to represent value returned from a function
 R = t.TypeVar("R")
 
 
-class RuntimeAuditHook(metaclass=ABCMeta):
+class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
     """Abstract base class that serves as a template for hooks whose body should be run as Python
     runtime audit hooks, in accordance with `PEP 578`_.
 

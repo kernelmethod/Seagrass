@@ -23,7 +23,9 @@ class ProtoHook(t.Protocol[C]):
 
     .. doctest:: example_impl
 
-        >>> class TypeCheckHook:
+        >>> from seagrass.base import ProtoHook
+
+        >>> class TypeCheckHook(ProtoHook[None]):
         ...     def prehook(self, event_name, args, kwargs):
         ...         assert isinstance(args[0], str), "Input must be type str"
         ...
@@ -40,6 +42,10 @@ class ProtoHook(t.Protocol[C]):
         Traceback (most recent call last):
         AssertionError: Input must be type str
     """
+
+    enabled: bool = True
+    prehook_priority: int = DEFAULT_PREHOOK_PRIORITY
+    posthook_priority: int = DEFAULT_POSTHOOK_PRIORITY
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
@@ -66,52 +72,8 @@ class ProtoHook(t.Protocol[C]):
         """
 
 
-def prehook_priority(hook: ProtoHook) -> int:
-    priority = getattr(hook, "prehook_priority", DEFAULT_PREHOOK_PRIORITY)
-    if not isinstance(priority, int):
-        raise TypeError(f"prehook_priority for {hook} must be an integer")
-    return priority
-
-
-prehook_priority.__doc__ = f"""\
-Get the priority in which the prehook should be executed. Prehooks are executed in
-*ascending* order of their priority, i.e. prehooks with low ``prehook_priority``
-are executed *before* those with high ``prehook_priority``.
-
-If ``hook.prehook_priority`` is defined, its value is used as the priority; otherwise
-the default priority ``{DEFAULT_PREHOOK_PRIORITY=}`` is used.
-
-:param ProtoHook hook: the hook whose prehook priority should be retrieved.
-:return: the priority of the prehook.
-:rtype: int
-:raises TypeError: if ``hook.prehook_priority`` is set to a non-integer value.
-"""
-
-
-def posthook_priority(hook: ProtoHook) -> int:
-    priority = getattr(hook, "posthook_priority", DEFAULT_POSTHOOK_PRIORITY)
-    if not isinstance(priority, int):
-        raise TypeError(f"posthook_priority for {hook} must be an integer")
-    return priority
-
-
-posthook_priority.__doc__ = f"""\
-Get the priority in which the posthook should be executed. Posthooks are executed in
-*descending* order of their priority, i.e. posthooks with low ``posthook_priority``
-are executed *after* those with high ``posthook_priority``.
-
-If ``hook.posthook_priority`` is defined, its value is used as the priority; otherwise
-the default priority ``{DEFAULT_POSTHOOK_PRIORITY=}`` is used.
-
-:param ProtoHook hook: the hook whose posthook priority should be retrieved.
-:return: the priority of the posthook.
-:rtype: int
-:raises TypeError: if ``hook.posthook_priority`` is set to a non-integer value.
-"""
-
-
 @t.runtime_checkable
-class LogResultsHook(t.Protocol):
+class LogResultsHook(ProtoHook, t.Protocol):
     """A protocol class for hooks that support an additional `log_results` method that
     outputs the results of the hook."""
 
@@ -126,7 +88,7 @@ class LogResultsHook(t.Protocol):
 
 
 @t.runtime_checkable
-class ResettableHook(t.Protocol):
+class ResettableHook(ProtoHook, t.Protocol):
     """A protocol class for hooks that can be reset.
 
     **Examples:** here is a minimal example of a Seagrass hook that satisfies the
@@ -136,9 +98,9 @@ class ResettableHook(t.Protocol):
 
     .. doctest::
 
-       >>> from seagrass.base import ResettableHook
+       >>> from seagrass.base import ProtoHook, ResettableHook
 
-       >>> class PrintEventHook:
+       >>> class PrintEventHook(ProtoHook[None]):
        ...     def __init__(self):
        ...         self.reset()
        ...
@@ -146,9 +108,6 @@ class ResettableHook(t.Protocol):
        ...         if event_name == "my_event":
        ...             self.event_counter += 1
        ...             print(f"my_event has be raised {self.event_counter} times")
-       ...
-       ...     def posthook(self, *args):
-       ...         pass
        ...
        ...     def reset(self):
        ...         self.event_counter = 0

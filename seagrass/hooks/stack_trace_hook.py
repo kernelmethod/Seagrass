@@ -1,6 +1,7 @@
 import inspect
 import typing as t
 from collections import Counter, defaultdict
+from seagrass.base import ProtoHook
 
 
 class TracedFrame(t.NamedTuple):
@@ -21,7 +22,7 @@ class TracedFrame(t.NamedTuple):
         return f"{self.filename}#{self.lineno}"
 
 
-class StackTraceHook:
+class StackTraceHook(ProtoHook[None]):
     """An audit hook that captures the stack trace of where events are raised
     and collects statistics about caller locations."""
 
