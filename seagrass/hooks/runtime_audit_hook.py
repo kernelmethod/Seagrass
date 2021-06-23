@@ -94,36 +94,49 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
 
         return wrapper
 
-    def __init__(self, propagate_errors: t.Optional[bool] = None) -> None:
+    def __init__(
+        self, propagate_errors: t.Optional[bool] = None, traceable: bool = False
+    ) -> None:
         if propagate_errors is not None:
             self.propagate_errors = propagate_errors
         self.__update_properties()
 
+        hook = self.__create_sys_hook()
+
+        # Per https://docs.python.org/3/library/sys.html#sys.addaudithook, audit hooks are not traced
+        # unless __cantrace__ is set to True.
+        if traceable:
+            hook.__cantrace__ = True  # type: ignore[attr-defined]
+
         # Add the runtime audit hook after initializing the properties since the hook will in most
         # cases use some of the properties of the RuntimeAuditHook.
-        sys.addaudithook(self.__sys_hook)
+        sys.addaudithook(hook)
 
-    def __sys_hook(self, event: str, args: t.Tuple[t.Any, ...]) -> None:
-        """A wrapper around the sys_hook abstract method that first checks whether the hook
+    def __create_sys_hook(self) -> t.Callable[[str, t.Tuple[t.Any, ...]], None]:
+        """Creates wrapper around the sys_hook abstract method that first checks whether the hook
         is currently active before it executes anything. This is the function that actually
         gets added with sys.addaudithook, not sys_hook."""
-        if self.is_active:
-            try:
-                self.sys_hook(event, args)
-            except Exception as ex:
-                if self.propagate_errors:
-                    raise ex
-                else:
-                    if (logger := get_audit_logger()) is not None:
-                        # Temporarily disable the hook, since emitting a log could create new
-                        # runtime events. In some cases this could lead to an infinite recursion.
-                        with self.__disable_runtime_hook():
-                            logger.error(
-                                "%s raised in %s.sys_hook: %s",
-                                ex.__class__.__name__,
-                                self.__class__.__name__,
-                                ex,
-                            )
+
+        def __sys_hook(event: str, args: t.Tuple[t.Any, ...]) -> None:
+            if self.is_active:
+                try:
+                    self.sys_hook(event, args)
+                except Exception as ex:
+                    if self.propagate_errors:
+                        raise ex
+                    else:
+                        if (logger := get_audit_logger()) is not None:
+                            # Temporarily disable the hook, since emitting a log could create new
+                            # runtime events. In some cases this could lead to an infinite recursion.
+                            with self.__disable_runtime_hook():
+                                logger.error(
+                                    "%s raised in %s.sys_hook: %s",
+                                    ex.__class__.__name__,
+                                    self.__class__.__name__,
+                                    ex,
+                                )
+
+        return __sys_hook
 
     @contextmanager
     def __disable_runtime_hook(self) -> t.Iterator[None]:
@@ -147,7 +160,9 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         pass
 
     @__update
-    def cleanup(self, event: str, context: t.Optional[str], exc: t.Optional[Exception]) -> None:
+    def cleanup(
+        self, event: str, context: t.Optional[str], exc: t.Optional[Exception]
+    ) -> None:
         self.__current_event = context
 
 

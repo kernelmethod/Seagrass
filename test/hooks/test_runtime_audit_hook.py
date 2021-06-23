@@ -18,7 +18,7 @@ class FileOpenRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
 
     class _Hook(RuntimeAuditHook):
         def __init__(self):
-            super().__init__()
+            super().__init__(traceable=True)
             self.total_file_opens = 0
 
         def sys_hook(self, event_name, args):
@@ -86,7 +86,8 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
     their sys_hook function."""
 
     class _Hook(RuntimeAuditHook):
-        propagate_errors: bool = False
+        def __init__(self):
+            super().__init__(propagate_errors=False, traceable=True)
 
         def sys_hook(self, event, args):
             raise ValueError("my_test_message")

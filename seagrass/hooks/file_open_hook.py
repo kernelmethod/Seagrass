@@ -22,8 +22,8 @@ class FileOpenHook(RuntimeAuditHook):
 
     file_open_counter: t.DefaultDict[str, t.Counter[FileOpenInfo]]
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, traceable: bool = False) -> None:
+        super().__init__(traceable=traceable)
         self.file_open_counter = defaultdict(t.Counter[FileOpenInfo])
 
     def sys_hook(self, runtime_event: str, args: t.Tuple[t.Any, ...]) -> None:
