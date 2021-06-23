@@ -47,10 +47,6 @@ class CounterHook(ProtoHook[None]):
     ) -> None:
         self.event_counter[event_name] += 1
 
-    def posthook(self, event_name: str, result: t.Any, context: None) -> None:
-        # Posthook does nothing
-        pass
-
     def reset(self) -> None:
         self.event_counter.clear()
 

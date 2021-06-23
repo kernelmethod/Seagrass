@@ -50,9 +50,5 @@ class StackTraceHook(ProtoHook[None]):
             # See note in https://docs.python.org/3/library/inspect.html#the-interpreter-stack
             del current_stack
 
-    def posthook(self, event: str, result: t.Any, context: None) -> None:
-        # Posthook does nothing
-        pass
-
     def reset(self) -> None:
         self.stack_trace_counter.clear()
