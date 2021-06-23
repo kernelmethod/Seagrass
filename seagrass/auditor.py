@@ -18,7 +18,21 @@ _current_audit_logger: ContextVar[t.Optional[logging.Logger]] = ContextVar(
 
 # A type variable used to represent a function that can take
 # arbitrary/unknown inputs and returns an arbitrary/unknown type
-F = t.TypeVar("F", bound=t.Callable[..., t.Any])
+F = t.TypeVar("F", bound=t.Callable)
+
+
+# Protocols used to specify the type of function returned by Auditor.audit. This function is
+# effectively equivalent to the original, except that now it also includes an __event_name__
+# attribute.
+class AuditedFunc(t.Protocol[F]):
+    __event_name__: str
+    __call__: F
+
+
+class AuditDecorator(t.Protocol[F]):
+    @property
+    def __call__(self) -> t.Callable[[F], AuditedFunc[F]]:
+        ...
 
 
 def _empty_event_func(*args, **kwargs) -> None:
@@ -181,8 +195,9 @@ class Auditor:
     def audit(
         self,
         event_name: t.Union[str, t.Callable[[F], str]],
+        func: None,
         **kwargs,
-    ) -> t.Callable[[F], F]:
+    ) -> AuditDecorator[F]:
         ...  # pragma: no cover
 
     @t.overload
@@ -192,7 +207,7 @@ class Auditor:
         func: F,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
-    ) -> F:
+    ) -> AuditedFunc[F]:
         ...  # pragma: no cover
 
     def audit(
@@ -201,7 +216,7 @@ class Auditor:
         func: t.Optional[F] = None,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
-    ):
+    ) -> t.Union[AuditDecorator[F], AuditedFunc[F]]:
         """Wrap a function with a new auditing event. You can call ``audit`` either as a function
         decorator or as a regular method of :py:class:`Auditor`.
 
@@ -255,7 +270,7 @@ class Auditor:
         # we return another decorator that can be called around the function.
         if func is None:
 
-            def decorator(func: F):
+            def decorator(func: F) -> AuditedFunc[F]:
                 return self.audit(event_name, func, hooks=hooks, **kwargs)
 
             return decorator
@@ -286,10 +301,11 @@ class Auditor:
 
         # Add an __event_name__ attribute to the function so that users can easily look up
         # the name of the event. This is especially useful for events that are auto-named.
-        wrapper.__event_name__ = event_name  # type: ignore[attr-defined]
+        wrapper = t.cast(AuditedFunc[F], wrapper)
+        wrapper.__event_name__ = event_name
 
         self.event_wrappers[event_name] = wrapper
-        return t.cast(F, wrapper)
+        return wrapper
 
     def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:
         """Create a new "empty" event. When this event is executed, it runs any hooks that are
