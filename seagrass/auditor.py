@@ -54,6 +54,7 @@ class Auditor:
         self.events = dict()
         self.event_wrappers = dict()
         self.hooks = set()
+        self.reset_filter()
 
     @property
     def enabled(self) -> bool:
@@ -62,6 +63,52 @@ class Auditor:
         :type: bool
         """
         return self.__enabled
+
+    @property
+    def event_filter(self) -> t.Callable[[str], bool]:
+        """A filter over the events being audited.
+
+        :param EventFilter filter: the filter that should be added to the auditor. The filter
+            should satisfy the :py:class:`seagrass.events.EventFilter` interface -- that is, they
+            should be functions that take a single string and return a bool.
+        :raises TypeError: if the filters don't satisfy the
+            :py:class:`~seagrass.events.EventFilter` interface.
+
+        **Examples:**
+
+        .. testsetup:: filter-events-doctests
+
+            from seagrass import Auditor
+            from seagrass._docs import configure_logging
+            configure_logging()
+            auditor = Auditor()
+
+        .. doctest:: filter-events-doctests
+
+            >>> from seagrass.hooks import LoggingHook
+
+            >>> hook = LoggingHook(prehook_msg = lambda event, *args: f"{event} called")
+
+            >>> _ = auditor.create_event("example.foo", hooks=[hook])
+
+            >>> with auditor.start_auditing():
+            ...     auditor.raise_event("example.foo")
+            (DEBUG) seagrass: example.foo called
+
+            >>> auditor.event_filter = lambda event: not event.startswith("example.")
+
+            >>> with auditor.start_auditing():
+            ...     auditor.raise_event("example.foo")
+        """
+        return self.__event_filter
+
+    @event_filter.setter
+    def event_filter(self, filter: t.Callable[[str], bool]):
+        self.__event_filter = filter
+
+    def reset_filter(self) -> None:
+        """Reset the event filter used by the Auditor."""
+        self.event_filter = lambda event: True
 
     def toggle_auditing(self, mode: bool) -> None:
         """Enable or disable auditing.
@@ -73,7 +120,10 @@ class Auditor:
 
     @contextmanager
     def start_auditing(
-        self, reset_hooks: bool = False, log_results: bool = False
+        self,
+        filter: t.Optional[t.Callable[[str], bool]] = None,
+        reset_hooks: bool = False,
+        log_results: bool = False,
     ) -> t.Iterator[None]:
         """Create a new context within which the auditor is enabled. You can replicate this
         functionality by calling :py:meth:`toggle_auditing`, e.g.
@@ -96,18 +146,28 @@ class Auditor:
         some additional benefits too, e.g. it allows you to access the logger for the most recent
         auditing context using ``seagrass.get_audit_logger``.
 
+        :param Callable[[str],bool] filter: a filter to apply on which events should be audited.
         :param bool log_results: Log hooks results with :py:meth:`log_results` before exiting
             the auditing context.
         :param bool reset_hooks: Reset hooks with :py:meth:`reset`: before exiting the
             auditing context.
         """
         try:
-            token = _current_audit_logger.set(self.logger)
+            logger_token = _current_audit_logger.set(self.logger)
+
+            if filter is not None:
+                old_filter = self.event_filter
+                self.event_filter = filter
+
             self.toggle_auditing(True)
             yield None
+
         finally:
             self.toggle_auditing(False)
-            _current_audit_logger.reset(token)
+            _current_audit_logger.reset(logger_token)
+
+            if filter is not None:
+                self.event_filter = old_filter
 
             if log_results:
                 self.log_results()
@@ -213,7 +273,7 @@ class Auditor:
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if not self.enabled:
+            if not self.enabled or not self.event_filter(event_name):
                 return new_event.func(*args, **kwargs)
             else:
                 return new_event(*args, **kwargs)

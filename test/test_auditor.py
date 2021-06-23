@@ -164,6 +164,51 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         # should once again return None.
         self.assertEqual(get_audit_logger(), None)
 
+    def test_filter_events(self):
+        hook = seagrass.hooks.CounterHook()
+        self.auditor.create_event("test.foo", hooks=[hook])
+        self.auditor.create_event("bar", hooks=[hook])
+
+        ec = hook.event_counter
+
+        def raise_events():
+            for event in ("test.foo", "bar"):
+                self.auditor.raise_event(event)
+
+        with self.auditor.start_auditing(
+            filter=lambda event: event.startswith("test"), reset_hooks=True
+        ):
+            raise_events()
+            self.assertEqual(ec["test.foo"], 1)
+            self.assertEqual(ec["bar"], 0)
+
+        # After we leave the auditing context, the filter should be reset.
+        with self.auditor.start_auditing(reset_hooks=True):
+            raise_events()
+            self.assertEqual(ec["test.foo"], 1)
+            self.assertEqual(ec["bar"], 1)
+
+        # It should also be possible to modify the event filter using the setter. This setter is not
+        # context-dependent.
+        self.auditor.event_filter = lambda event: event.startswith("test")
+
+        with self.auditor.start_auditing(reset_hooks=True):
+            raise_events()
+            self.assertEqual(ec["test.foo"], 1)
+            self.assertEqual(ec["bar"], 0)
+
+        with self.auditor.start_auditing(reset_hooks=True):
+            raise_events()
+            self.assertEqual(ec["test.foo"], 1)
+            self.assertEqual(ec["bar"], 0)
+
+        # However, once we call reset_filter, all events should start executing as normal again
+        self.auditor.reset_filter()
+        with self.auditor.start_auditing(reset_hooks=True):
+            raise_events()
+            self.assertEqual(ec["test.foo"], 1)
+            self.assertEqual(ec["bar"], 1)
+
 
 class GlobalAuditorTestCase(unittest.TestCase):
     """Tests for using the global auditor instance."""
