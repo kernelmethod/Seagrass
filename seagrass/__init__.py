@@ -1,6 +1,7 @@
 # flake8: noqa: F401
 import typing as t
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
+from . import base, errors, events, hooks
 from contextvars import ContextVar
 
 # "Global auditor" that can be used to audit events without having to create an
@@ -126,6 +127,11 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
 
 __all__ = [
+    "base",
+    "errors",
+    "events",
+    "hooks",
+    "DEFAULT_LOGGER_NAME",
     "Auditor",
     "get_audit_logger",
     "global_auditor",

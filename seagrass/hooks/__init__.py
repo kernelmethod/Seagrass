@@ -6,6 +6,7 @@ from .profiler_hook import ProfilerHook
 from .runtime_audit_hook import RuntimeAuditHook
 from .stack_trace_hook import StackTraceHook
 from .timer_hook import TimerHook
+from .tracing_hook import TracingHook
 
 __all__ = [
     "CounterHook",
@@ -15,4 +16,5 @@ __all__ = [
     "StackTraceHook",
     "RuntimeAuditHook",
     "TimerHook",
+    "TracingHook",
 ]
