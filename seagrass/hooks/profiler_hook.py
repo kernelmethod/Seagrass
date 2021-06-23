@@ -65,7 +65,7 @@ class ProfilerHook(ProtoHook[bool]):
         self.profile.enable()
         return was_active
 
-    def cleanup(self, event_name: str, context: bool) -> None:
+    def cleanup(self, event_name: str, context: bool, exc: t.Optional[Exception]) -> None:
         # Stop profiling
         self.is_active = context
         if not self.is_active:

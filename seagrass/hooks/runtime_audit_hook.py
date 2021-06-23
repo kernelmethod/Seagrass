@@ -147,7 +147,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         pass
 
     @__update
-    def cleanup(self, event: str, context: t.Optional[str]) -> None:
+    def cleanup(self, event: str, context: t.Optional[str], exc: t.Optional[Exception]) -> None:
         self.__current_event = context
 
 

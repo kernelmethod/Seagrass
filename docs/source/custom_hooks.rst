@@ -380,14 +380,14 @@ variable to be the name of the current Seagrass event that is executing (or
 
     >>> CURRENT_EVENT: t.Optional[str] = None
 
-    >>> class BadCurrentEventHook(ProtoHook[t.Optional[str]]):
-    ...      def prehook(self, event_name, args, kwargs) -> t.Optional[str]:
+    >>> class BadCurrentEventHook(ProtoHook):
+    ...      def prehook(self, event_name, args, kwargs):
     ...          global CURRENT_EVENT
     ...          old_event = CURRENT_EVENT
     ...          CURRENT_EVENT = event_name
     ...          return old_event
     ...
-    ...      def posthook(self, event_name, result, context: t.Optional[str]):
+    ...      def posthook(self, event_name, result, context):
     ...          global CURRENT_EVENT
     ...          old_event = context
     ...          CURRENT_EVENT = old_event
@@ -447,14 +447,14 @@ executed.
 
    >>> from seagrass.base import ProtoHook, CleanupHook
 
-   >>> class CurrentEventHook(ProtoHook[t.Optional[str]]):
-   ...      def prehook(self, event_name, args, kwargs) -> t.Optional[str]:
+   >>> class CurrentEventHook(ProtoHook):
+   ...      def prehook(self, event_name, args, kwargs):
    ...          global CURRENT_EVENT
    ...          old_event = CURRENT_EVENT
    ...          CURRENT_EVENT = event_name
    ...          return old_event
    ...
-   ...      def cleanup(self, event_name, context: t.Optional[str]):
+   ...      def cleanup(self, event_name, context, exc):
    ...          global CURRENT_EVENT
    ...          old_event = context
    ...          CURRENT_EVENT = old_event

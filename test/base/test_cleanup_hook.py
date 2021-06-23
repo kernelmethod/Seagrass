@@ -19,6 +19,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
 
         def reset(self):
             self.counter = 0
+            self.exception = None
 
     class _HookA(_BaseTestHook):
         # Regular hook with no cleanup stage
@@ -30,8 +31,9 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         def posthook(self, *args):
             pass
 
-        def cleanup(self, *args):
+        def cleanup(self, event, context, exc):
             self.counter += 1
+            self.exception = exc
 
     class _HookC(_BaseTestHook):
         # A hook that satisfies the CleanupHook interface, but which also raises an
@@ -39,8 +41,9 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         def posthook(self, *args):
             assert False
 
-        def cleanup(self, *args):
+        def cleanup(self, event, context, exc):
             self.counter += 1
+            self.exception = exc
 
     class _HookD(_BaseTestHook):
         # A hook that satisfies the CleanupHook interface, but which also raises an
@@ -51,8 +54,9 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         def posthook(self, *args):
             pass
 
-        def cleanup(self, *args):
+        def cleanup(self, event, context, exc):
             self.counter += 1
+            self.exception = exc
 
     def setUp(self):
         super().setUp()
@@ -61,6 +65,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.hook_c = self._HookC()
         self.hook_d = self._HookD()
         self.hooks = (self.hook_a, self.hook_b, self.hook_c, self.hook_d)
+        self.ex = None
 
     def test_hooks_satisfy_interfaces(self):
         # All of the hooks, except for _HookA, should satisfy the CleanupHook interface.
@@ -93,10 +98,15 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
             self.assertEqual(self.hook_a.counter, 1)
             self.assertEqual(self.hook_b.counter, 1)
 
-            with self.assertRaises(RuntimeError):
+            try:
                 err()
+                self.fail("err() did not raise RuntimeError")
+            except RuntimeError as ex:
+                self.ex = ex
+
             self.assertEqual(self.hook_a.counter, 1)
             self.assertEqual(self.hook_b.counter, 2)
+            self.assertEqual(self.hook_b.exception, self.ex)
 
     def test_hooks_b_and_c(self):
         # Tests for _HookC + _HookB
@@ -104,15 +114,26 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         with self.auditor.start_auditing(reset_hooks=True):
             with self.assertRaises(PosthookError):
                 nerr()
+
+            # Since the error was raised in the posthooks, and not in the prehooks or in
+            # the wrapped function, 'exception' should be None when hook_b.cleanup and
+            # hook_c.cleanup are called.
             self.assertEqual(self.hook_b.counter, 1)
             self.assertEqual(self.hook_c.counter, 1)
+            self.assertEqual(self.hook_b.exception, None)
+            self.assertEqual(self.hook_c.exception, None)
 
             # Despite the fact that an error is raised in the posthook, we should prioritize
             # the error that was raised by the wrapped function.
-            with self.assertRaises(RuntimeError):
+            try:
                 err()
+                self.fail("err() did not raise RuntimeError")
+            except RuntimeError as ex:
+                self.ex = ex
             self.assertEqual(self.hook_b.counter, 2)
             self.assertEqual(self.hook_c.counter, 2)
+            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_c.exception, self.ex)
 
     def test_hooks_b_and_d(self):
         # Tests for _HookD + _HookB, and _HookB + _HookD
@@ -130,20 +151,34 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                 nerr()
             self.assertEqual(self.hook_b.counter, 0)
             self.assertEqual(self.hook_d.counter, 0)
+            self.assertEqual(self.hook_b.exception, None)
+            self.assertEqual(self.hook_d.exception, None)
 
             with self.assertRaises(AssertionError):
                 err()
             self.assertEqual(self.hook_b.counter, 0)
             self.assertEqual(self.hook_d.counter, 0)
+            self.assertEqual(self.hook_b.exception, None)
+            self.assertEqual(self.hook_d.exception, None)
 
         nerr, err = self._create_test_functions("hook_bd", self.hook_b, self.hook_d)
         with self.auditor.start_auditing(reset_hooks=True):
-            with self.assertRaises(AssertionError):
+            try:
                 nerr()
+                self.fail("nerr() did not raise AssertionError")
+            except AssertionError as ex:
+                self.ex = ex
             self.assertEqual(self.hook_b.counter, 1)
             self.assertEqual(self.hook_d.counter, 0)
+            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_d.exception, None)
 
-            with self.assertRaises(AssertionError):
+            try:
                 err()
+                self.fail("err() did not raise AssertionError")
+            except AssertionError as ex:
+                self.ex = ex
             self.assertEqual(self.hook_b.counter, 2)
             self.assertEqual(self.hook_d.counter, 0)
+            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_d.exception, None)
