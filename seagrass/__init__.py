@@ -6,13 +6,39 @@ from contextvars import ContextVar
 # "Global auditor" that can be used to audit events without having to create an
 # auditor first.
 _GLOBAL_AUDITOR: ContextVar[Auditor] = ContextVar(
-    "__GLOBAL_SEAGRASS_AUDITOR", default=Auditor()
+    "_GLOBAL_SEAGRASS_AUDITOR", default=Auditor()
 )
 
 
 def global_auditor() -> Auditor:
     """Return the global Seagrass auditor."""
     return _GLOBAL_AUDITOR.get()
+
+
+# Export parts of the external API of the global Auditor instance from the module
+_EXPORTED_AUDITOR_ATTRIBUTES = [
+    "audit",
+    "create_event",
+    "raise_event",
+    "toggle_event",
+    "toggle_auditing",
+    "start_auditing",
+    "add_hooks",
+    "reset_hooks",
+    "log_results",
+    "logger",
+]
+
+
+# Create context variables to cache attributes that we've already looked up on the auditor. This makes
+# lookups on module attributes a bit faster.
+_GLOBAL_AUDITOR_ATTRS: t.Dict[str, ContextVar[t.Any]] = {}
+
+for attr in _EXPORTED_AUDITOR_ATTRIBUTES:
+    attr_var = ContextVar(
+        f"_GLOBAL_AUDITOR.{attr}", default=getattr(_GLOBAL_AUDITOR.get(), attr)
+    )
+    _GLOBAL_AUDITOR_ATTRS[attr] = attr_var
 
 
 class create_global_auditor(t.ContextManager[Auditor]):
@@ -54,40 +80,34 @@ class create_global_auditor(t.ContextManager[Auditor]):
             self.new_auditor = auditor
 
     def __enter__(self) -> Auditor:
-        self.token = _GLOBAL_AUDITOR.set(self.new_auditor)
+        self.auditor_token = _GLOBAL_AUDITOR.set(self.new_auditor)
+        self.attr_tokens = {}
+        for (attr, var) in _GLOBAL_AUDITOR_ATTRS.items():
+            self.attr_tokens[attr] = var.set(getattr(self.new_auditor, attr))
         return self.new_auditor
 
     def __exit__(self, *args) -> None:
-        _GLOBAL_AUDITOR.reset(self.token)
-
-
-# Export the external API of the global Auditor instance from the module
-__EXPORTED_AUDITOR_FUNCTIONS = set(
-    [
-        "audit",
-        "create_event",
-        "raise_event",
-        "toggle_event",
-        "toggle_auditing",
-        "start_auditing",
-        "add_hooks",
-        "reset_hooks",
-        "log_results",
-    ]
-)
-
-
-def __getattr__(attr: str) -> t.Any:
-    if attr in __EXPORTED_AUDITOR_FUNCTIONS:
-        return getattr(global_auditor(), attr)
-    else:
-        raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")
+        _GLOBAL_AUDITOR.reset(self.auditor_token)
+        for (attr, token) in self.attr_tokens.items():
+            _GLOBAL_AUDITOR_ATTRS[attr].reset(token)
 
 
 __all__ = [
     "Auditor",
     "get_audit_logger",
     "global_auditor",
+    "create_global_auditor",
 ]
 
-__all__ += list(__EXPORTED_AUDITOR_FUNCTIONS)
+__all__ += _EXPORTED_AUDITOR_ATTRIBUTES
+
+
+def __getattr__(attr: str) -> t.Any:
+    if (auditor_attr := _GLOBAL_AUDITOR_ATTRS.get(attr)) is not None:
+        return auditor_attr.get()
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")
+
+
+def __dir__() -> t.List[str]:
+    return __all__
