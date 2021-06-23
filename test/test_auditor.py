@@ -226,6 +226,36 @@ class GlobalAuditorTestCase(unittest.TestCase):
 
         self.assertEqual(hook.event_counter["test.foo"], 10)
 
+    def test_create_global_auditor_in_context(self):
+        hook = seagrass.hooks.CounterHook()
+
+        with seagrass.create_global_auditor() as auditor:
+            self.assertEqual(seagrass.global_auditor(), auditor)
+
+            # Any events created inside of this context should be created with the new auditor
+            @seagrass.audit("test.foo", hooks=[hook])
+            def foo():
+                pass
+
+        # Outside of the context, the auditor should be set back to the original
+        # global auditor.
+        self.assertNotEqual(seagrass.global_auditor(), auditor)
+
+        # Events created inside of the context should only be raised with the newly-created
+        # auditor.
+        with seagrass.start_auditing(reset_hooks=True):
+            foo()
+            self.assertEqual(hook.event_counter["test.foo"], 0)
+
+        with auditor.start_auditing(reset_hooks=True):
+            foo()
+            self.assertEqual(hook.event_counter["test.foo"], 1)
+
+        # It should also be possible to create an Auditor and pass it into create_global_auditor
+        auditor = Auditor()
+        with seagrass.create_global_auditor(auditor):
+            self.assertEqual(seagrass.global_auditor(), auditor)
+
 
 if __name__ == "__main__":
     unittest.main()
