@@ -1,5 +1,5 @@
 import sys
-import typing as t
+import seagrass._typing as t
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 
@@ -64,6 +64,10 @@ class Event:
             the event is triggered.
         :param bool raise_runtime_events: if ``True``, two `Python runtime audit events`_ are raised
             using `sys.audit`_ before and after running the function wrapped by the event.
+
+            .. note::
+                This parameter is only supported for Python version >= 3.8.
+
         :param Optional[str] prehook_audit_event_name: the name of the runtime audit event
             that should be raised *before* calling the wrapped function. If set to ``None``,
             the audit event is automatically named ``f"prehook:{name}"``. This parameter is
@@ -79,8 +83,17 @@ class Event:
         self.func: F = func
         self.enabled = enabled
         self.name = name
-        self.raise_runtime_events = raise_runtime_events
         self.hooks = []
+
+        if raise_runtime_events:
+            # Check that the Python version supports audit hooks
+            if not hasattr(sys, "audit"):
+                raise NotImplementedError(
+                    "Runtime audit events are not supported for Python versions that don't "
+                    "include sys.audit and sys.addaudithook"
+                )
+
+        self.raise_runtime_events = raise_runtime_events
 
         if prehook_audit_event_name is None:
             prehook_audit_event_name = f"prehook:{name}"

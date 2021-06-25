@@ -1,6 +1,6 @@
 import logging
 import pstats
-import typing as t
+import seagrass._typing as t
 from io import StringIO
 from cProfile import Profile
 from seagrass.base import ProtoHook
@@ -65,7 +65,9 @@ class ProfilerHook(ProtoHook[bool]):
         self.profile.enable()
         return was_active
 
-    def cleanup(self, event_name: str, context: bool, exc: t.Optional[Exception]) -> None:
+    def cleanup(
+        self, event_name: str, context: bool, exc: t.Optional[Exception]
+    ) -> None:
         # Stop profiling
         self.is_active = context
         if not self.is_active:
@@ -96,7 +98,8 @@ class ProfilerHook(ProtoHook[bool]):
 
         # Dump results to an in-memory stream
         output = StringIO()
-        if (stats := self.get_stats(stream=output)) is None:
+        stats = self.get_stats(stream=output)
+        if stats is None:
             logger.info("   (no samples were collected)")
             return
 

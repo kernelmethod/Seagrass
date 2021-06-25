@@ -5,29 +5,55 @@ import tempfile
 import unittest
 from seagrass.base import CleanupHook
 from seagrass.hooks import RuntimeAuditHook
-from test.utils import HookTestCaseMixin
+from test.utils import HookTestCaseMixin, req_python_version
 
 
 class RuntimeHookTestCaseMixin(HookTestCaseMixin):
     check_interfaces = (CleanupHook,)
 
 
+# Example hooks that subclass RuntimeAuditHook
+
+
+class FileOpenTestHook(RuntimeAuditHook):
+    """A simple RuntimeAuditHook that tracks file opens. This is a simplified version of
+    FileOpenHook."""
+
+    def __init__(self):
+        super().__init__(traceable=True)
+        self.total_file_opens = 0
+
+    def sys_hook(self, event_name, args):
+        if event_name == "open":
+            self.total_file_opens += 1
+            self.opened_filename = args[0]
+            self.opened_mode = args[1]
+
+
+class ErroneousHook(RuntimeAuditHook):
+    """A runtime audit hook that raises an error whenever sys_hook gets called."""
+
+    def __init__(self):
+        super().__init__(propagate_errors=False, traceable=True)
+
+    def sys_hook(self, event, args):
+        raise ValueError("my_test_message")
+
+
+# Test cases
+
+
 class FileOpenRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
     """Build an auditing hook for tracking file opens out of RuntimeAuditHook, similar to
     FileOpenHook."""
 
-    class _Hook(RuntimeAuditHook):
-        def __init__(self):
-            super().__init__(traceable=True)
-            self.total_file_opens = 0
+    hook_gen = FileOpenTestHook
 
-        def sys_hook(self, event_name, args):
-            if event_name == "open":
-                self.total_file_opens += 1
-                self.opened_filename = args[0]
-                self.opened_mode = args[1]
-
-    hook_gen = _Hook
+    # These test cases require the use of sys.audit and sys.addaudithook, so they're disabled
+    # for Python versions < 3.8
+    @req_python_version(min=(3, 8))
+    def setUp(self):
+        super().setUp()
 
     def test_hook_function(self):
         @self.auditor.audit("test.say_hello", hooks=[self.hook])
@@ -85,15 +111,9 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
     """Tests for hook classes that inherit from RuntimeHook that raise an error in
     their sys_hook function."""
 
-    class _Hook(RuntimeAuditHook):
-        def __init__(self):
-            super().__init__(propagate_errors=False, traceable=True)
+    hook_gen = ErroneousHook
 
-        def sys_hook(self, event, args):
-            raise ValueError("my_test_message")
-
-    hook_gen = _Hook
-
+    @req_python_version(min=(3, 8))
     def setUp(self):
         super().setUp()
 
@@ -109,7 +129,8 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
             self.my_event()
         output = self.logging_output.getvalue().rstrip()
         self.assertEqual(
-            output, "(ERROR) ValueError raised in _Hook.sys_hook: my_test_message"
+            output,
+            "(ERROR) ValueError raised in ErroneousHook.sys_hook: my_test_message",
         )
 
     def test_hook_with_propagation(self):
@@ -117,6 +138,22 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
         with self.auditor.start_auditing():
             with self.assertRaises(ValueError):
                 self.my_event()
+
+
+class RaiseExceptionForPythonBefore38(unittest.TestCase):
+    """RuntimeAuditHook tests that should be run for Python versions before 3.8, when sys.audit
+    and sys.addaudithook were added."""
+
+    @req_python_version(max=(3, 8))
+    def setUp(self):
+        pass
+
+    def test_get_error_when_creating_hook(self):
+        with self.assertRaises(NotImplementedError):
+            _ = FileOpenTestHook()
+
+        with self.assertRaises(NotImplementedError):
+            _ = ErroneousHook()
 
 
 if __name__ == "__main__":

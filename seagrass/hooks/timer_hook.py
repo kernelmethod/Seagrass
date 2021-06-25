@@ -2,7 +2,7 @@
 
 import logging
 import time
-import typing as t
+import seagrass._typing as t
 from collections import defaultdict
 from seagrass.base import ProtoHook
 

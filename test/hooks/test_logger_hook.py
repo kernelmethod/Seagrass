@@ -13,11 +13,11 @@ class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
         super(HookTestCaseMixin, self).setUp()
 
         self.hook_pre = LoggingHook(
-            prehook_msg=lambda e, args, kwargs: f"hook_pre: {e}, {args=}, {kwargs=}",
+            prehook_msg=lambda e, args, kwargs: f"hook_pre: {e}, args={args}, kwargs={kwargs}",
         )
         self.hook_both = LoggingHook(
-            prehook_msg=lambda e, args, kwargs: f"hook_both: {e}, {args=}, {kwargs=}",
-            posthook_msg=lambda e, result: f"hook_both: {e}, {result=}",
+            prehook_msg=lambda e, args, kwargs: f"hook_both: {e}, args={args}, kwargs={kwargs}",
+            posthook_msg=lambda e, result: f"hook_both: {e}, result={result}",
             loglevel=logging.INFO,
         )
 
@@ -44,13 +44,17 @@ class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
             multiply_or_add(*args, **kwargs_add)
 
         output = self.logging_output.getvalue().rstrip().split("\n")
-        self.assertEqual(output[0], f"(DEBUG) hook_pre: {event}, {args=}, kwargs={{}}")
-        self.assertEqual(output[1], f"(INFO) hook_both: {event}, {args=}, kwargs={{}}")
-        self.assertEqual(output[2], f"(INFO) hook_both: {event}, result={24}")
         self.assertEqual(
-            output[3], f"(DEBUG) hook_pre: {event}, {args=}, kwargs={kwargs_add}"
+            output[0], f"(DEBUG) hook_pre: {event}, args={args}, kwargs={{}}"
         )
         self.assertEqual(
-            output[4], f"(INFO) hook_both: {event}, {args=}, kwargs={kwargs_add}"
+            output[1], f"(INFO) hook_both: {event}, args={args}, kwargs={{}}"
+        )
+        self.assertEqual(output[2], f"(INFO) hook_both: {event}, result={24}")
+        self.assertEqual(
+            output[3], f"(DEBUG) hook_pre: {event}, args={args}, kwargs={kwargs_add}"
+        )
+        self.assertEqual(
+            output[4], f"(INFO) hook_both: {event}, args={args}, kwargs={kwargs_add}"
         )
         self.assertEqual(output[5], f"(INFO) hook_both: {event}, result={10}")

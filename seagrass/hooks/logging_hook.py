@@ -1,5 +1,5 @@
 import logging
-import typing as t
+import seagrass._typing as t
 from seagrass import get_audit_logger
 from seagrass.base import ProtoHook
 
@@ -42,7 +42,8 @@ class LoggingHook(ProtoHook[None]):
         if self.prehook_msg is None:
             pass
         else:
-            if (logger := get_audit_logger()) is not None:
+            logger = get_audit_logger()
+            if logger is not None:
                 logger.log(self.loglevel, self.prehook_msg(event_name, args, kwargs))
 
     def posthook(
@@ -54,5 +55,6 @@ class LoggingHook(ProtoHook[None]):
         if self.posthook_msg is None:
             pass
         else:
-            if (logger := get_audit_logger()) is not None:
+            logger = get_audit_logger()
+            if logger is not None:
                 logger.log(self.loglevel, self.posthook_msg(event_name, result))

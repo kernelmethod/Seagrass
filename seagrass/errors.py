@@ -1,7 +1,7 @@
 # Basic errors that can be thrown while using Seagrass
 
 import os
-import typing as t
+import seagrass._typing as t
 
 
 class SeagrassError(Exception):

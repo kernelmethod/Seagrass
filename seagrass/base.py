@@ -1,5 +1,5 @@
 import logging
-import typing as t
+import seagrass._typing as t
 
 # Type variable for contexts returned by prehooks
 C = t.TypeVar("C")

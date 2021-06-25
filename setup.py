@@ -5,9 +5,12 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
+with open("requirements.txt", "r", encoding="utf-8") as f:
+    install_requires = f.readlines()
+
 setup(
     name="seagrass",
-    version="0.6.0",
+    version="0.7.0",
     description="Auditing and profiling multi-tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -26,7 +29,7 @@ setup(
     ],
     url="https://github.com/kernelmethod/Seagrass/",
     packages=find_packages(exclude=["tests"]),
-    install_requires=[],
-    python_requires=">=3.8.0",
+    install_requires=install_requires,
+    python_requires=">=3.7.0",
     license="BSD",
 )

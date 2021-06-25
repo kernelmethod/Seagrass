@@ -1,6 +1,6 @@
 import functools
 import logging
-import typing as t
+import seagrass._typing as t
 from contextlib import contextmanager
 from contextvars import ContextVar
 from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
@@ -360,7 +360,8 @@ class Auditor:
             provided name.
         """
 
-        if (wrapper := self.event_wrappers.get(event_name)) is not None:
+        wrapper = self.event_wrappers.get(event_name)
+        if wrapper is not None:
             return wrapper(*args, **kwargs)
         else:
             raise EventNotFoundError(event_name)
@@ -373,7 +374,8 @@ class Auditor:
         :raises seagrass.errors.EventNotFoundError: if the auditor can't find the event with the
             provided name.
         """
-        if (event := self.events.get(event_name)) is not None:
+        event = self.events.get(event_name)
+        if event is not None:
             event.add_hooks(*hooks)
         else:
             raise EventNotFoundError(event_name)

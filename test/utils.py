@@ -3,7 +3,7 @@
 import logging
 import logging.config
 import sys
-import typing as t
+import seagrass._typing as t
 from functools import wraps
 from io import StringIO
 from seagrass import Auditor
@@ -124,10 +124,10 @@ def req_python_version(
         err_msg = f"{err_msg} {min[0]}.{min[1]} <= version <= {max[0]}.{max[1]}"
         bad_version = True
     elif (min is not None and max is None) and (version < min):
-        err_msg = f"{err_msg} {min[0]}.{min[1]} <= version"
+        err_msg = f"{err_msg} version >= {min[0]}.{min[1]}"
         bad_version = True
-    elif (min is None and max is not None) and (version > max):
-        err_msg = f"{err_msg} version <= {max[0]}.{max[1]}"
+    elif (min is None and max is not None) and (version >= max):
+        err_msg = f"{err_msg} version < {max[0]}.{max[1]}"
         bad_version = True
 
     if not bad_version:

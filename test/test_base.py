@@ -1,7 +1,7 @@
 # Tests for protocols and functions defined in seagrass.base
 
 import seagrass.base as base
-import typing as t
+import seagrass._typing as t
 import unittest
 
 

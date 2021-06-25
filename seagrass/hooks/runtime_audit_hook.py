@@ -1,5 +1,5 @@
 import sys
-import typing as t
+import seagrass._typing as t
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from functools import wraps
@@ -14,6 +14,9 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
     """Abstract base class that serves as a template for hooks whose body should be run as Python
     runtime audit hooks, in accordance with `PEP 578`_.
 
+    .. note::
+        :py:class:`~seagrass.hooks.RuntimeAuditHook` is only supported for Python versions >= 3.8
+
     **Examples:** in the code below, ``RuntimeEventCounterHook`` is a class derived from the
     ``RuntimeAuditHook`` base class that prints every time a runtime audit event is triggered.
 
@@ -23,6 +26,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         auditor = Auditor()
 
     .. doctest:: runtime-audit-hook-example
+        :pyversion: >= 3.8
 
         >>> import sys
 
@@ -33,7 +37,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         ...         super().__init__()
         ...
         ...     def sys_hook(self, event, args):
-        ...         print(f"Encountered {event=!r} with {args=}")
+        ...         print(f"Encountered event={event!r} with args={args}")
         ...
 
         >>> hook = RuntimeEventCounterHook()
@@ -97,6 +101,12 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
     def __init__(
         self, propagate_errors: t.Optional[bool] = None, traceable: bool = False
     ) -> None:
+        if not hasattr(sys, "audit"):
+            raise NotImplementedError(
+                "RuntimeAuditHook is not supported for Python versions that don't "
+                "include sys.audit and sys.addaudithook"
+            )
+
         if propagate_errors is not None:
             self.propagate_errors = propagate_errors
         self.__update_properties()
@@ -125,7 +135,8 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
                     if self.propagate_errors:
                         raise ex
                     else:
-                        if (logger := get_audit_logger()) is not None:
+                        logger = get_audit_logger()
+                        if logger is not None:
                             # Temporarily disable the hook, since emitting a log could create new
                             # runtime events. In some cases this could lead to an infinite recursion.
                             with self.__disable_runtime_hook():
