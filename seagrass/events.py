@@ -64,6 +64,10 @@ class Event:
             the event is triggered.
         :param bool raise_runtime_events: if ``True``, two `Python runtime audit events`_ are raised
             using `sys.audit`_ before and after running the function wrapped by the event.
+
+            .. note::
+                This parameter is only supported for Python version >= 3.8.
+
         :param Optional[str] prehook_audit_event_name: the name of the runtime audit event
             that should be raised *before* calling the wrapped function. If set to ``None``,
             the audit event is automatically named ``f"prehook:{name}"``. This parameter is

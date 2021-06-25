@@ -21,20 +21,20 @@ Here is a basic example of a hook that just prints the arguments given to the
    class ArgsHook(ProtoHook[None]):
        
        def prehook(self, event_name, args, kwargs):
-           print(f"ArgsHook: prehook: {event_name=}, {args=}, {kwargs=}")
+           print(f"prehook: event_name={event_name!r}, args={args}, kwargs={kwargs}")
 
        def posthook(self, event_name, result, context):
-           print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
+           print(f"posthook: event_name={event_name!r}, result={result}, context={context}")
 
    class ElapsedTimeHook(ProtoHook[float]):
        def prehook(self, event_name, args, kwargs) -> float:
-           print(f"ElapsedTimeHook: Getting start time for {event_name}...")
+           print(f"Getting start time for {event_name}...")
            return time.time()
    
        def posthook(self, event_name, result, context: float):
            elapsed = time.time() - context
            end = time.time()
-           print(f"ElapsedTimeHook: Time spent in {event_name}: {elapsed:.1f}s")
+           print(f"Time spent in {event_name}: {elapsed:.1f}s")
 
    auditor = Auditor()
 
@@ -45,10 +45,10 @@ Here is a basic example of a hook that just prints the arguments given to the
    class ArgsHook(ProtoHook[None]):
        
        def prehook(self, event_name, args, kwargs) -> None:
-           print(f"ArgsHook: prehook: {event_name=}, {args=}, {kwargs=}")
+           print(f"prehook: event_name={event_name!r}, args={args}, kwargs={kwargs}")
 
        def posthook(self, event_name, result, context: None):
-           print(f"ArgsHook: posthook: {event_name=}, {result=}, {context=}")
+           print(f"posthook: event_name={event_name!r}, result={result}, context={context}")
 
 If you're using a typechecker like mypy, note that the type argument to
 ``ProtoHook`` is the type of the context returned by ``prehook`` (and used by
@@ -67,14 +67,14 @@ hook events:
 
    >>> @auditor.audit("example.foo", hooks=[hook])
    ... def foo(x, y, z=0):
-   ...     print(f"{x + y + z = }")
+   ...     print(f"x + y + z = {x + y + z}")
    ...     return x + y + z
 
    >>> with auditor.start_auditing():
    ...     result = foo(2, -1, z=3)
-   ArgsHook: prehook: event_name='example.foo', args=(2, -1), kwargs={'z': 3}
+   prehook: event_name='example.foo', args=(2, -1), kwargs={'z': 3}
    x + y + z = 4
-   ArgsHook: posthook: event_name='example.foo', result=4, context=None
+   posthook: event_name='example.foo', result=4, context=None
 
 ------------------------------------------------
 Passing context between the prehook and posthook
@@ -98,13 +98,13 @@ executing an event:
 
    >>> class ElapsedTimeHook(ProtoHook[float]):
    ...     def prehook(self, event_name, args, kwargs) -> float:
-   ...         print(f"ElapsedTimeHook: Getting start time for {event_name}...")
+   ...         print(f"Getting start time for {event_name}...")
    ...         return time.time()
    ...
    ...     def posthook(self, event_name, result, context: float):
    ...         elapsed = time.time() - context
    ...         end = time.time()
-   ...         print(f"ElapsedTimeHook: Time spent in {event_name}: {elapsed:.1f}s")
+   ...         print(f"Time spent in {event_name}: {elapsed:.1f}s")
    ...
 
    >>> hook = ElapsedTimeHook()
@@ -113,8 +113,8 @@ executing an event:
 
    >>> with auditor.start_auditing():
    ...     ausleep(0.1)
-   ElapsedTimeHook: Getting start time for event.sleep...
-   ElapsedTimeHook: Time spent in event.sleep: 0.1s
+   Getting start time for event.sleep...
+   Time spent in event.sleep: 0.1s
 
 ------------------------------------
 Change prehook and posthook priority
@@ -144,10 +144,10 @@ Their are two ways to change the order in which hooks are run:
 
       >>> with auditor.start_auditing():
       ...     ausleep(0.1)
-      ArgsHook: prehook: event_name='sleep_ex_1', args=(0.1,), kwargs={}
-      ElapsedTimeHook: Getting start time for sleep_ex_1...
-      ElapsedTimeHook: Time spent in sleep_ex_1: 0.1s
-      ArgsHook: posthook: event_name='sleep_ex_1', result=None, context=None
+      prehook: event_name='sleep_ex_1', args=(0.1,), kwargs={}
+      Getting start time for sleep_ex_1...
+      Time spent in sleep_ex_1: 0.1s
+      posthook: event_name='sleep_ex_1', result=None, context=None
 
    And here's the output if we put ``ElapsedTimeHook`` before ``ArgsHook``:
 
@@ -159,10 +159,10 @@ Their are two ways to change the order in which hooks are run:
 
       >>> with auditor.start_auditing():
       ...     ausleep(0.1)
-      ElapsedTimeHook: Getting start time for sleep_ex_2...
-      ArgsHook: prehook: event_name='sleep_ex_2', args=(0.1,), kwargs={}
-      ArgsHook: posthook: event_name='sleep_ex_2', result=None, context=None
-      ElapsedTimeHook: Time spent in sleep_ex_2: 0.1s
+      Getting start time for sleep_ex_2...
+      prehook: event_name='sleep_ex_2', args=(0.1,), kwargs={}
+      posthook: event_name='sleep_ex_2', result=None, context=None
+      Time spent in sleep_ex_2: 0.1s
 
 2. Set a ``prehook_priority`` and/or ``posthook_priority`` on your hooks.
    Seagrass calls :py:func:`seagrass.base.prehook_priority` and
@@ -197,10 +197,10 @@ Their are two ways to change the order in which hooks are run:
 
       >>> with auditor.start_auditing():
       ...     ausleep(0.1)
-      ArgsHook: prehook: event_name='priority_ex_1', args=(0.1,), kwargs={}
-      ElapsedTimeHook: Getting start time for priority_ex_1...
-      ElapsedTimeHook: Time spent in priority_ex_1: 0.1s
-      ArgsHook: posthook: event_name='priority_ex_1', result=None, context=None
+      prehook: event_name='priority_ex_1', args=(0.1,), kwargs={}
+      Getting start time for priority_ex_1...
+      Time spent in priority_ex_1: 0.1s
+      posthook: event_name='priority_ex_1', result=None, context=None
 
       >>> # Test with low prehook/high posthook priority
 
@@ -210,10 +210,10 @@ Their are two ways to change the order in which hooks are run:
 
       >>> with auditor.start_auditing():
       ...     ausleep(0.1)
-      ElapsedTimeHook: Getting start time for priority_ex_2...
-      ArgsHook: prehook: event_name='priority_ex_2', args=(0.1,), kwargs={}
-      ElapsedTimeHook: Time spent in priority_ex_2: 0.1s
-      ArgsHook: posthook: event_name='priority_ex_2', result=None, context=None
+      Getting start time for priority_ex_2...
+      prehook: event_name='priority_ex_2', args=(0.1,), kwargs={}
+      Time spent in priority_ex_2: 0.1s
+      posthook: event_name='priority_ex_2', result=None, context=None
 
 
 -----------------------
@@ -394,7 +394,7 @@ variable to be the name of the current Seagrass event that is executing (or
 
     >>> hook = BadCurrentEventHook()
 
-    >>> print_event = lambda: print(f"{CURRENT_EVENT=}")
+    >>> print_event = lambda: print(f"CURRENT_EVENT={CURRENT_EVENT!r}")
 
     >>> foo = auditor.audit("event.foo", print_event, hooks=[hook])
 

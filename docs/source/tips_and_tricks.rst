@@ -57,7 +57,7 @@ with the new one:
 
    >>> with auditor.start_auditing():
    ...     p = Point2D(3, 4)
-   ...     print(f"{p.norm()=}")
+   ...     print(f"p.norm()={p.norm()}")
    PrintEventHook: event.norm triggered
    p.norm()=5.0
 

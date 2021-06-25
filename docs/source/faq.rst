@@ -80,10 +80,10 @@ these events is raised, along with the arguments passed to ``sys.audit``:
    >>> def foo_event_hook(event, args):
    ...     if event == "prehook:foo_event":
    ...         args, kwargs = args
-   ...         print(f"prehook called: {args=}, {kwargs=}")
+   ...         print(f"prehook called: args={args}, kwargs={kwargs}")
    ...     elif event == "posthook:foo_event":
    ...         result = args[0]
-   ...         print(f"posthook called: {result=}")
+   ...         print(f"posthook called: result={result}")
 
    >>> sys.addaudithook(foo_event_hook)
 
