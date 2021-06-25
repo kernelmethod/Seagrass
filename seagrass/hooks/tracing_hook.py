@@ -40,7 +40,7 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         ...             MY_VAR = frame.f_locals["MY_VAR"]
         ...             logger = seagrass.get_audit_logger()
         ...             if logger is not None:
-        ...                 logger.info(f"Found {MY_VAR=!r}")
+        ...                 logger.info(f"Found MY_VAR={MY_VAR!r}")
         ...         return self.tracefunc
 
         >>> hook = MyVarHook()

@@ -53,11 +53,12 @@ can use Seagrass as a thin layer around ``sys.audit`` by passing
    from seagrass import Auditor
    auditor = Auditor()
 
-.. testcode:: raise-runtime-events
+.. doctest:: raise-runtime-events
+   :pyversion: >= 3.8
 
-   @auditor.audit("foo_event", raise_runtime_events=True)
-   def foo(x, y, z=0):
-       return x + y + z
+   >>> @auditor.audit("foo_event", raise_runtime_events=True)
+   ... def foo(x, y, z=0):
+   ...     return x + y + z
 
 The code snippet above created a new Seagrass event, ``"foo_event"``, that
 doesn't actually call any Seagrass hooks. Instead, whenever we call ``foo``, two
@@ -74,6 +75,7 @@ Here's an example where we add a new runtime hook that prints whenever one of
 these events is raised, along with the arguments passed to ``sys.audit``:
 
 .. doctest:: raise-runtime-events
+   :pyversion: >= 3.8
 
    >>> import sys
 

@@ -26,6 +26,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         auditor = Auditor()
 
     .. doctest:: runtime-audit-hook-example
+        :pyversion: >= 3.8
 
         >>> import sys
 

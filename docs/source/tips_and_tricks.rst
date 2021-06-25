@@ -187,7 +187,7 @@ function:
 
       >>> class PrintHook(ProtoHook):
       ...     def prehook(self, event, args, kwargs):
-      ...         print(f"{event=!r} raised")
+      ...         print(f"event={event!r} raised")
 
       >>> auditor = Auditor()
 
