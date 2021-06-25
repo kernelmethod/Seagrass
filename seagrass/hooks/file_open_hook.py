@@ -1,4 +1,4 @@
-import typing as t
+import seagrass._typing as t
 from collections import defaultdict
 from logging import Logger
 from .runtime_audit_hook import RuntimeAuditHook

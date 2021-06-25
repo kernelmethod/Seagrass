@@ -1,5 +1,5 @@
 import seagrass
-import typing as t
+import seagrass._typing as t
 import unittest
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.hooks import TracingHook
@@ -52,12 +52,12 @@ class TracingHookTestCase(HookTestCaseMixin, unittest.TestCase):
         @self.auditor.audit("event.foo", hooks=[self.hook])
         def foo(x):
             MY_TEST_VARIABLE = x
-            self.logger.info(f"{MY_TEST_VARIABLE=}")
+            self.logger.info(f"MY_TEST_VARIABLE={MY_TEST_VARIABLE}")
 
         @self.auditor.audit("event.bar", hooks=[self.hook])
         def bar():
             MY_TEST_VARIABLE = 1337
-            self.logger.info(f"{MY_TEST_VARIABLE=}")
+            self.logger.info(f"MY_TEST_VARIABLE={MY_TEST_VARIABLE}")
 
         with self.auditor.start_auditing(reset_hooks=True):
             foo(42)
@@ -101,7 +101,7 @@ class TracingHookTestCase(HookTestCaseMixin, unittest.TestCase):
         def bar(x):
             MY_TEST_VARIABLE = x + 1
             MY_TEST_VARIABLE = foo(MY_TEST_VARIABLE) - 5
-            self.logger.info(f"{MY_TEST_VARIABLE=}")
+            self.logger.info(f"MY_TEST_VARIABLE={MY_TEST_VARIABLE}")
             self.assertTrue(trace_hook.is_active)
 
         with self.auditor.start_auditing(reset_hooks=True):

@@ -1,5 +1,5 @@
 import sys
-import typing as t
+import seagrass._typing as t
 from abc import ABCMeta, abstractmethod
 from contextvars import ContextVar, Token
 from seagrass.base import CleanupHook
@@ -38,7 +38,8 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         ...     def tracefunc(self, frame, event, arg):
         ...         if "MY_VAR" in frame.f_locals:
         ...             MY_VAR = frame.f_locals["MY_VAR"]
-        ...             if (logger := seagrass.get_audit_logger()) is not None:
+        ...             logger = seagrass.get_audit_logger()
+        ...             if logger is not None:
         ...                 logger.info(f"Found {MY_VAR=!r}")
         ...         return self.tracefunc
 

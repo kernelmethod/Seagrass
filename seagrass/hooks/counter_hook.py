@@ -1,5 +1,5 @@
 import logging
-import typing as t
+import seagrass._typing as t
 from collections import Counter
 from seagrass.base import ProtoHook
 

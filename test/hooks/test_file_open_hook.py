@@ -2,7 +2,7 @@
 
 import tempfile
 import unittest
-from test.utils import HookTestCaseMixin
+from test.utils import HookTestCaseMixin, req_python_version
 from seagrass.base import LogResultsHook, ResettableHook, CleanupHook
 from seagrass.hooks import FileOpenHook
 
@@ -10,6 +10,12 @@ from seagrass.hooks import FileOpenHook
 class FileOpenHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
     check_interfaces = (LogResultsHook, ResettableHook, CleanupHook)
+
+    # These test cases require the use of sys.audit and sys.addaudithook, so they're disabled
+    # for Python versions < 3.8
+    @req_python_version(min=(3, 8))
+    def setUp(self):
+        super().setUp()
 
     @staticmethod
     def hook_gen():

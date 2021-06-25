@@ -9,8 +9,6 @@
 Seagrass is a Python library for hooking and auditing events in your Python
 code.
 
-*Note: Seagrass is only supported for Python versions >= 3.8*
-
 ## Installation
 
 You can install the latest version of Seagrass using `pip`:

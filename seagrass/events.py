@@ -1,5 +1,5 @@
 import sys
-import typing as t
+import seagrass._typing as t
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 
@@ -79,8 +79,17 @@ class Event:
         self.func: F = func
         self.enabled = enabled
         self.name = name
-        self.raise_runtime_events = raise_runtime_events
         self.hooks = []
+
+        if raise_runtime_events:
+            # Check that the Python version supports audit hooks
+            if not hasattr(sys, "audit"):
+                raise NotImplementedError(
+                    "Runtime audit events are not supported for Python versions that don't "
+                    "include sys.audit and sys.addaudithook"
+                )
+
+        self.raise_runtime_events = raise_runtime_events
 
         if prehook_audit_event_name is None:
             prehook_audit_event_name = f"prehook:{name}"

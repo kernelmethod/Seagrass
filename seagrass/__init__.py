@@ -1,5 +1,5 @@
 # flake8: noqa: F401
-import typing as t
+import seagrass._typing as t
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
 from . import base, errors, events, hooks
 from contextvars import ContextVar
@@ -143,7 +143,8 @@ __all__ += _EXPORTED_AUDITOR_ATTRIBUTES
 
 
 def __getattr__(attr: str) -> t.Any:
-    if (auditor_attr := _GLOBAL_AUDITOR_ATTRS.get(attr)) is not None:
+    auditor_attr = _GLOBAL_AUDITOR_ATTRS.get(attr)
+    if auditor_attr is not None:
         return auditor_attr.get()
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")

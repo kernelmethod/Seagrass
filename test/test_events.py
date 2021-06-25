@@ -1,5 +1,3 @@
-# Tests for raising Python audit events with sys.audit through Auditors
-
 import seagrass
 import sys
 import unittest
@@ -7,7 +5,7 @@ import warnings
 from collections import Counter, defaultdict
 from seagrass import auto
 from seagrass.hooks import CounterHook
-from test.utils import SeagrassTestCaseMixin
+from test.utils import SeagrassTestCaseMixin, req_python_version
 
 with seagrass.create_global_auditor():
 
@@ -106,6 +104,7 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
             self.assertEqual(hook.event_counter["test.foo"], 2)
             self.assertEqual(hook.event_counter["test.bar"], 3)
 
+    @req_python_version(min=(3, 8))
     def test_wrap_function_and_create_sys_audit_event(self):
         # We should be able to set up sys.audit events when we wrap functions
         @self.auditor.audit("test.foo", raise_runtime_events=True)
@@ -137,7 +136,7 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                     events_counter[event] += 1
                     args_dict[event].append(args)
             except Exception as ex:
-                warnings.warn(f"Exception raised in audit_hook: {ex=}")
+                warnings.warn(f"Exception raised in audit_hook: ex={ex}")
 
         sys.addaudithook(audit_hook)
 
@@ -180,6 +179,13 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         run_fns(test_args, test_kwargs)
         self.assertEqual(set(events_counter), set())
         self.assertEqual(set(args_dict), set())
+
+    @req_python_version(max=(3, 8))
+    def test_get_error_with_runtime_events_for_python_before_38(self):
+        """For Python versions before 3.8, sys.audit and sys.addaudithook do not exist, so
+        an exception should be raised if raise_runtime_events=True."""
+        with self.assertRaises(NotImplementedError):
+            self.auditor.create_event("my_test_event", raise_runtime_events=True)
 
     def test_auto_name_event(self):
         from pathlib import Path
