@@ -95,15 +95,19 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         """Get the current global tracing hook."""
         return _tracing_hook.get()
 
-    def __tracefunc(
-        self, frame: FrameType, event: str, arg: t.Any
-    ) -> t.Optional["TraceFunc"]:
+    def __create_tracefunc(
+        self, func: t.Optional["TraceFunc"],
+    ) -> "TraceFunc":
         """A wrapper around the tracefunc function. This is the function that actually gets added
         with sys.settrace."""
-        if self.is_active:
-            return self.tracefunc(frame, event, arg)
-        else:
-            return self.__tracefunc
+
+        def tracefunc(frame: FrameType, event: str, arg: t.Any) -> "TracingHook.TraceFunc":
+            if func is not None and self.is_active:
+                return self.__create_tracefunc(func(frame, event, arg))
+            else:
+                return self.__create_tracefunc(None)
+
+        return tracefunc
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
@@ -118,7 +122,7 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
                 f"Only one TracingHook can be active at a time (current tracing hook = {current_hook!r})"
             )
 
-        tracefunc_token = _tracing_hook.set(self.__tracefunc)
+        tracefunc_token = _tracing_hook.set(self.__create_tracefunc(self.tracefunc))
         old_event = self.__current_event
         self.__current_event = event_name
         self.__is_active = True
