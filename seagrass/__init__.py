@@ -1,13 +1,15 @@
 # flake8: noqa: F401
+import functools as _functools
 import seagrass._typing as t
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
 from .events import get_current_event
 from . import base, errors, events, hooks
-from contextvars import ContextVar
+from contextvars import ContextVar as _ContextVar
+from logging import Logger as _Logger
 
 # "Global auditor" that can be used to audit events without having to create an
 # auditor first.
-_GLOBAL_AUDITOR: ContextVar[Auditor] = ContextVar(
+_GLOBAL_AUDITOR: _ContextVar[Auditor] = _ContextVar(
     "_GLOBAL_SEAGRASS_AUDITOR", default=Auditor()
 )
 
@@ -50,30 +52,44 @@ def auto(func: t.Callable) -> str:
     return f"{func.__module__}.{func.__qualname__}"
 
 
+_F = t.TypeVar("_F", bound=t.Callable)
+
 # Export parts of the external API of the global Auditor instance from the module
-_EXPORTED_AUDITOR_ATTRIBUTES = [
-    "audit",
-    "create_event",
-    "raise_event",
-    "toggle_event",
-    "toggle_auditing",
-    "start_auditing",
-    "add_hooks",
-    "reset_hooks",
-    "log_results",
-    "logger",
-]
+_EXPORTED_AUDITOR_ATTRIBUTES: t.List[str] = []
 
 
-# Create context variables to cache attributes that we've already looked up on the auditor. This makes
-# lookups on module attributes a bit faster.
-_GLOBAL_AUDITOR_ATTRS: t.Dict[str, ContextVar[t.Any]] = {}
+def _auditor_func(get_func: t.Callable[[], _F]) -> _F:
+    """Wrap a function that retrieves a method of the global auditor so that it can be called as
+    though it were the original method."""
+    # Get the current global auditor's current instance of the input function
+    # so that we can copy its name, annotations, documentation, etc.
+    func = get_func()
 
-for attr in _EXPORTED_AUDITOR_ATTRIBUTES:
-    attr_var = ContextVar(
-        f"_GLOBAL_AUDITOR.{attr}", default=getattr(_GLOBAL_AUDITOR.get(), attr)
-    )
-    _GLOBAL_AUDITOR_ATTRS[attr] = attr_var
+    # Add the function's name to the _EXPORTED_AUDITOR_ATTRIBUTES list
+    _EXPORTED_AUDITOR_ATTRIBUTES.append(func.__name__)
+
+    @_functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return get_func()(*args, **kwargs)
+
+    return t.cast(_F, wrapper)
+
+
+audit = _auditor_func(lambda: global_auditor().audit)
+async_audit = _auditor_func(lambda: global_auditor().audit)
+create_event = _auditor_func(lambda: global_auditor().create_event)
+raise_event = _auditor_func(lambda: global_auditor().raise_event)
+toggle_event = _auditor_func(lambda: global_auditor().toggle_event)
+toggle_auditing = _auditor_func(lambda: global_auditor().toggle_auditing)
+start_auditing = _auditor_func(lambda: global_auditor().start_auditing)
+add_hooks = _auditor_func(lambda: global_auditor().add_hooks)
+reset_hooks = _auditor_func(lambda: global_auditor().reset_hooks)
+
+# Remaining attributes are properties that need to be retrieved using the module __getattr__
+# function
+logger: _Logger
+
+_EXPORTED_AUDITOR_ATTRIBUTES += ["logger"]
 
 
 class create_global_auditor(t.ContextManager[Auditor]):
@@ -116,15 +132,10 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
     def __enter__(self) -> Auditor:
         self.auditor_token = _GLOBAL_AUDITOR.set(self.new_auditor)
-        self.attr_tokens = {}
-        for (attr, var) in _GLOBAL_AUDITOR_ATTRS.items():
-            self.attr_tokens[attr] = var.set(getattr(self.new_auditor, attr))
         return self.new_auditor
 
     def __exit__(self, *args) -> None:
         _GLOBAL_AUDITOR.reset(self.auditor_token)
-        for (attr, token) in self.attr_tokens.items():
-            _GLOBAL_AUDITOR_ATTRS[attr].reset(token)
 
 
 __all__ = [
@@ -144,13 +155,8 @@ __all__ = [
 __all__ += _EXPORTED_AUDITOR_ATTRIBUTES
 
 
-def __getattr__(attr: str) -> t.Any:
-    auditor_attr = _GLOBAL_AUDITOR_ATTRS.get(attr)
-    if auditor_attr is not None:
-        return auditor_attr.get()
+def __getattr__(attr) -> t.Any:
+    if attr == "logger":
+        return global_auditor().logger
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")
-
-
-def __dir__() -> t.List[str]:
-    return __all__

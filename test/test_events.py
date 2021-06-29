@@ -7,7 +7,7 @@ from seagrass import auto, get_current_event
 from seagrass.hooks import CounterHook
 from test.utils import SeagrassTestCaseMixin, req_python_version
 
-with seagrass.create_global_auditor():
+with seagrass.create_global_auditor() as _:
 
     class ExampleClass:
         # Test class used to check how functions are auto-named by Seagrass
