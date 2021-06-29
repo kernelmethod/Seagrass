@@ -22,6 +22,7 @@ from typing import (
     DefaultDict,
     Dict,
     Final,
+    Generic,
     Iterator,
     List,
     NamedTuple,

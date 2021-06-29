@@ -79,6 +79,7 @@ class CallableContextManagerHookTestCase(HookTestCaseMixin, unittest.TestCase):
             bar()
 
         output = self.logging_output.getvalue().rstrip().split("\n")
+        print(output)
         self.assertEqual(output[0], "(DEBUG) Calling test.bar")
         self.assertEqual(output[1], "(DEBUG) Exiting test.bar")
 

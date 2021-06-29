@@ -141,7 +141,7 @@ class CleanupHook(ProtoHook[C], t.Protocol[C]):
             t.Optional[BaseException],
             t.Optional[TracebackType],
         ],
-    ) -> t.Optional[bool]:
+    ) -> None:
         """Perform the hook's cleanup stage. The ``event_name`` and ``context`` are the same as
         those used by the ``posthook`` function. If an exception was thrown while executing the
         event it will be provided in the ``exception`` argument, otherwise, ``exception`` will
