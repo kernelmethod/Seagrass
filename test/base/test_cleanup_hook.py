@@ -2,7 +2,6 @@
 
 import unittest
 from seagrass.base import ProtoHook, CleanupHook, ResettableHook
-from seagrass.errors import PosthookError
 from test.utils import SeagrassTestCaseMixin
 
 
@@ -112,7 +111,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         # Tests for _HookC + _HookB
         nerr, err = self._create_test_functions("hook_cb", self.hook_c, self.hook_b)
         with self.auditor.start_auditing(reset_hooks=True):
-            with self.assertRaises(PosthookError):
+            with self.assertRaises(AssertionError):
                 nerr()
 
             # Since the error was raised in the posthooks, and not in the prehooks or in

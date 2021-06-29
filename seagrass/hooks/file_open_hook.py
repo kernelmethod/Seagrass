@@ -17,8 +17,7 @@ class FileOpenHook(RuntimeAuditHook):
     # Give this hook slightly higher priority by default so that
     # we can avoid counting calls to open that occur in other
     # hooks.
-    prehook_priority: int = 3
-    posthook_priority: int = 3
+    priority: int = 3
 
     file_open_counter: t.DefaultDict[str, t.Counter[FileOpenInfo]]
 

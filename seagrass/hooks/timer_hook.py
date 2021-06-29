@@ -11,8 +11,7 @@ class TimerHook(ProtoHook[float]):
 
     # Relatively high prehook/posthook priority so that TimerHook gets
     # called soon before and after a wrapped function.
-    prehook_priority: int = 8
-    posthook_priority: int = 8
+    priority: int = 8
 
     event_times: t.DefaultDict[str, float]
 

@@ -18,11 +18,7 @@ class ProfilerHook(ProtoHook[bool]):
     restrictions: t.Tuple[R, ...]
     is_active: bool = True
 
-    # Set a high prehook_priority and posthook_priority to ensure
-    # that the profiler only gets called directly before and after
-    # the event.
-    prehook_priority: int = 10
-    posthook_priority: int = 10
+    priority: int = 10
 
     def __init__(
         self,

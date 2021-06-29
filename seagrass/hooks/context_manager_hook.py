@@ -91,13 +91,11 @@ class ContextManagerHook(ProtoHook[CtxType[C]]):
             t.Optional[BaseException],
             t.Optional[TracebackType],
         ],
-    ) -> t.Optional[bool]:
+    ) -> None:
         old_cm = context
         current_cm = self.current_context_manager
         self.__current_cm = old_cm
 
         if (self.nest or not self.is_active) and current_cm is not None:
             exc_type, exc_val, tb = exc
-            return current_cm.__exit__(exc_type, exc_val, tb)
-        else:
-            return None
+            current_cm.__exit__(exc_type, exc_val, tb)

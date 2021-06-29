@@ -3,7 +3,7 @@ import sys
 import unittest
 import warnings
 from collections import Counter, defaultdict
-from seagrass import auto
+from seagrass import auto, get_current_event
 from seagrass.hooks import CounterHook
 from test.utils import SeagrassTestCaseMixin, req_python_version
 
@@ -198,6 +198,27 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.assertEqual(
             ExampleClass.say_hello.__event_name__, f"{__name__}.ExampleClass.say_hello"
         )
+
+    def test_get_current_event(self):
+        @self.auditor.audit("test.foo")
+        def foo():
+            self.assertEqual(get_current_event(), "test.foo")
+
+        @self.auditor.audit("test.bar")
+        def bar():
+            self.assertEqual(get_current_event(), "test.bar")
+            foo()
+            self.assertEqual(get_current_event(), "test.bar")
+
+        with self.auditor.start_auditing():
+            foo()
+            bar()
+
+        # We should be able to specify a default value for get_current_event(). If no default is
+        # specified and an event isn't being executed, an exception should be thrown.
+        self.assertEqual(get_current_event(None), None)
+        with self.assertRaises(LookupError):
+            get_current_event()
 
 
 if __name__ == "__main__":

@@ -5,8 +5,7 @@ from types import TracebackType
 # Type variable for contexts returned by prehooks
 C = t.TypeVar("C")
 
-DEFAULT_PREHOOK_PRIORITY: int = 0
-DEFAULT_POSTHOOK_PRIORITY: int = 0
+DEFAULT_PRIORITY: int = 0
 
 
 class ProtoHook(t.Protocol[C]):
@@ -45,8 +44,7 @@ class ProtoHook(t.Protocol[C]):
     """
 
     enabled: bool = True
-    prehook_priority: int = DEFAULT_PREHOOK_PRIORITY
-    posthook_priority: int = DEFAULT_POSTHOOK_PRIORITY
+    priority: int = DEFAULT_PRIORITY
 
     def prehook(
         self, event_name: str, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
@@ -143,7 +141,7 @@ class CleanupHook(ProtoHook[C], t.Protocol[C]):
             t.Optional[BaseException],
             t.Optional[TracebackType],
         ],
-    ) -> t.Optional[bool]:
+    ) -> None:
         """Perform the hook's cleanup stage. The ``event_name`` and ``context`` are the same as
         those used by the ``posthook`` function. If an exception was thrown while executing the
         event it will be provided in the ``exception`` argument, otherwise, ``exception`` will

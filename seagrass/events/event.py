@@ -1,9 +1,10 @@
 import sys
 import seagrass._typing as t
+from contextlib import ExitStack
 from contextvars import ContextVar
-from seagrass.base import ProtoHook, CleanupHook
-from seagrass.errors import PosthookError
-from types import TracebackType
+from seagrass.base import ProtoHook
+
+from .contexts import EventData, HookExecutionContext
 
 # Context variable used to store the current event
 current_event: ContextVar[str] = ContextVar("seagrass_current_event")
@@ -13,12 +14,12 @@ T = t.TypeVar("T")
 
 @t.overload
 def get_current_event(default: t.Missing) -> str:
-    ...
+    ...  # pragma: no cover
 
 
 @t.overload
 def get_current_event(default: T) -> t.Union[str, T]:
-    ...
+    ...  # pragma: no cover
 
 
 def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
@@ -36,31 +37,6 @@ def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
 F = t.Callable[..., t.Any]
 
 
-class _HookErrorCapture:
-    """A context manager object used to capture errors when running the prehooks and function used
-    by a Seagrass event."""
-
-    exc: t.Tuple[t.Optional[Exception], t.Optional[str], t.Optional[TracebackType]]
-    __exception_raised: t.Optional[bool] = None
-
-    @property
-    def exception_raised(self):
-        if self.__exception_raised is None:
-            self.__exception_raised = self.exc != (None, None, None)
-        return self.__exception_raised
-
-    def __enter__(self):
-        return self
-
-    def __exit__(
-        self,
-        exc_type: t.Optional[Exception],
-        exc_val: t.Optional[str],
-        traceback: t.Optional[TracebackType],
-    ):
-        self.exc = (exc_type, exc_val, traceback)
-
-
 class Event:
     """Defines an event that is under audit. The event wraps around a function; instead of calling
     the function, we call the event, which first triggers any prehooks, *then* calls the function,
@@ -76,8 +52,7 @@ class Event:
         "hooks",
         "prehook_audit_event_name",
         "posthook_audit_event_name",
-        "__prehook_execution_order",
-        "__posthook_execution_order",
+        "__hook_execution_order",
     ]
 
     enabled: bool
@@ -86,8 +61,7 @@ class Event:
     hooks: t.List[ProtoHook]
     prehook_audit_event_name: str
     posthook_audit_event_name: str
-    __prehook_execution_order: t.List[int]
-    __posthook_execution_order: t.List[int]
+    __hook_execution_order: t.List[int]
 
     def __init__(
         self,
@@ -167,11 +141,8 @@ class Event:
         """Determine the order in which the events' hooks should be executed."""
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
-        self.__prehook_execution_order = sorted(
-            range(len(self.hooks)), key=lambda i: (self.hooks[i].prehook_priority, i)
-        )
-        self.__posthook_execution_order = sorted(
-            range(len(self.hooks)), key=lambda i: (-self.hooks[i].posthook_priority, -i)
+        self.__hook_execution_order = sorted(
+            range(len(self.hooks)), key=lambda i: (self.hooks[i].priority, i)
         )
 
     def __call__(self, *args, **kwargs) -> t.Any:
@@ -190,49 +161,24 @@ class Event:
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
-        prehook_contexts = {}
+        event_data = EventData(self.name, args, kwargs)
 
         try:
-            with _HookErrorCapture() as cap:
-                for hook_num in self.__prehook_execution_order:
+            with ExitStack() as stack:
+                for hook_num in self.__hook_execution_order:
                     hook = self.hooks[hook_num]
                     if hook.enabled:
-                        context = hook.prehook(self.name, args, kwargs)
-                        prehook_contexts[hook_num] = context
+                        stack.enter_context(HookExecutionContext(hook, event_data))
 
-                result = self.func(*args, **kwargs)
+                event_data.result = self.func(*args, **kwargs)
 
+            if event_data.result == t.MISSING:
+                # This point should never be reached
+                raise ValueError("Event result was not recorded")  # pragma: no cover
+
+            if self.raise_runtime_events:
+                sys.audit(self.posthook_audit_event_name, event_data.result)
         finally:
-            posthook_exceptions = []
-
-            # Execute posthooks and cleanup stages by order of their priority.
-            for hook_num in self.__posthook_execution_order:
-                # In some cases (e.g., if a prehook raises an Exception), a context may
-                # not exist for a given hook. We only execute the posthook and cleanup
-                # if a context exists.
-                context = prehook_contexts.get(hook_num, t.MISSING)
-                if context != t.MISSING:
-                    hook = self.hooks[hook_num]
-                    if not cap.exception_raised:
-                        try:
-                            hook.posthook(self.name, result, context)
-                        except Exception as ex:
-                            posthook_exceptions.append(ex)
-                    if isinstance(hook, CleanupHook):
-                        try:
-                            hook.cleanup(self.name, context, cap.exc)
-                        except Exception as ex:
-                            posthook_exceptions.append(ex)
-
-            # Reset the global current_event back to its original value
             current_event.reset(token)
 
-            # If one or more exceptions were thrown while processing the posthooks, we now
-            # bubble up those errors.
-            if len(posthook_exceptions) > 0:
-                raise PosthookError(posthook_exceptions)
-
-        if self.raise_runtime_events:
-            sys.audit(self.posthook_audit_event_name, result)
-
-        return result
+        return event_data.result

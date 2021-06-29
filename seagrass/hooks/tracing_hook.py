@@ -73,8 +73,7 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
 
     # High prehook/posthook priority since we generally don't want to trace other
     # Seagrass hooks
-    prehook_priority: int = 15
-    posthook_priority: int = 15
+    priority: int = 15
 
     __current_event: t.Optional[str] = None
     __is_active: bool = False
