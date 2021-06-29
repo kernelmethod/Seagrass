@@ -1,7 +1,6 @@
 import sys
 import seagrass._typing as t
 from contextvars import ContextVar
-from functools import cached_property
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 from types import TracebackType
@@ -42,10 +41,13 @@ class _HookErrorCapture:
     by a Seagrass event."""
 
     exc: t.Tuple[t.Optional[Exception], t.Optional[str], t.Optional[TracebackType]]
+    __exception_raised: t.Optional[bool] = None
 
-    @cached_property
+    @property
     def exception_raised(self):
-        return self.exc != (None, None, None)
+        if self.__exception_raised is None:
+            self.__exception_raised = self.exc != (None, None, None)
+        return self.__exception_raised
 
     def __enter__(self):
         return self
