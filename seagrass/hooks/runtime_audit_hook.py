@@ -1,6 +1,5 @@
 import sys
 import seagrass._typing as t
-from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 from functools import wraps
 from seagrass import get_audit_logger
@@ -10,9 +9,8 @@ from seagrass.base import ProtoHook
 R = t.TypeVar("R")
 
 
-class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
-    """Abstract base class that serves as a template for hooks whose body should be run as Python
-    runtime audit hooks, in accordance with `PEP 578`_.
+class RuntimeAuditHook(ProtoHook[t.Optional[str]]):
+    """A hook that executes its body as a Python runtime audit hook, in accordance with `PEP 578`_.
 
     .. note::
         :py:class:`~seagrass.hooks.RuntimeAuditHook` is only supported for Python versions >= 3.8
@@ -34,7 +32,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
 
         >>> class RuntimeEventCounterHook(RuntimeAuditHook):
         ...     def __init__(self):
-        ...         super().__init__()
+        ...         super().__init__(self.sys_hook)
         ...
         ...     def sys_hook(self, event, args):
         ...         print(f"Encountered event={event!r} with args={args}")
@@ -61,11 +59,6 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
 
     __current_event: t.Optional[str] = None
     __is_active: bool
-
-    @abstractmethod
-    def sys_hook(self, event: str, args: t.Tuple[t.Any, ...]) -> None:
-        """The runtime auditing hook that gets executed every time sys.audit() is called.
-        This must be defined in child classes of RuntimeAuditHook."""
 
     @property
     def is_active(self) -> bool:
@@ -99,13 +92,18 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
         return wrapper
 
     def __init__(
-        self, propagate_errors: t.Optional[bool] = None, traceable: bool = False
+        self,
+        sys_hook: t.Callable[[str, t.Tuple[t.Any, ...]], None],
+        propagate_errors: t.Optional[bool] = None,
+        traceable: bool = False,
     ) -> None:
         if not hasattr(sys, "audit"):
             raise NotImplementedError(
                 "RuntimeAuditHook is not supported for Python versions that don't "
                 "include sys.audit and sys.addaudithook"
             )
+
+        self.sys_hook = sys_hook
 
         if propagate_errors is not None:
             self.propagate_errors = propagate_errors

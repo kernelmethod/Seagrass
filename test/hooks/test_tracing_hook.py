@@ -10,9 +10,12 @@ from types import FrameType
 class EmptyTracingHook(TracingHook):
     """Example TracingHook where the tracing function does nothing."""
 
+    def __init__(self) -> None:
+        return super().__init__(self.tracefunc)
+
     def tracefunc(
         self, frame: FrameType, event: str, arg: t.Any
-    ) -> TracingHook.TraceFunc:
+    ) -> t.Optional[TracingHook.TraceFunc]:
         return self.tracefunc
 
 
@@ -22,12 +25,12 @@ class LocalVariableExtractorHook(TracingHook):
     """
 
     def __init__(self):
-        super().__init__()
+        super().__init__(self.tracefunc)
         self.reset()
 
     def tracefunc(
         self, frame: FrameType, event: str, arg: t.Any
-    ) -> TracingHook.TraceFunc:
+    ) -> t.Optional[TracingHook.TraceFunc]:
         if "MY_TEST_VARIABLE" in frame.f_locals:
             self.last_event = self.current_event
             self.MY_TEST_VARIABLE = frame.f_locals["MY_TEST_VARIABLE"]

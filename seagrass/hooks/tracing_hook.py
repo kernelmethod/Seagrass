@@ -1,6 +1,5 @@
 import sys
 import seagrass._typing as t
-from abc import ABCMeta, abstractmethod
 from contextvars import ContextVar, Token
 from seagrass.base import CleanupHook
 from types import FrameType
@@ -16,8 +15,8 @@ _tracing_hook: ContextVar[t.Optional["TracingHook.TraceFunc"]] = ContextVar(
 TracingHookContext = t.Tuple[t.Optional[str], Token, Token]
 
 
-class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
-    """Abstract base class for hooks that should be set as tracing functions.
+class TracingHook(CleanupHook[TracingHookContext]):
+    """Seagrass hook wrapper for tracing functions.
 
     **Example:** the code snippet below defines a new hook from
     :py:class:`~seagrass.hooks.TracingHook` that checks each frame to see if ``MY_VAR`` is defined
@@ -34,16 +33,15 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
 
         >>> from seagrass.hooks import TracingHook
 
-        >>> class MyVarHook(TracingHook):
-        ...     def tracefunc(self, frame, event, arg):
-        ...         if "MY_VAR" in frame.f_locals:
-        ...             MY_VAR = frame.f_locals["MY_VAR"]
-        ...             logger = seagrass.get_audit_logger(None)
-        ...             if logger is not None:
-        ...                 logger.info(f"Found MY_VAR={MY_VAR!r}")
-        ...         return self.tracefunc
+        >>> def tracefunc(frame, event, arg):
+        ...     if "MY_VAR" in frame.f_locals:
+        ...         MY_VAR = frame.f_locals["MY_VAR"]
+        ...         logger = seagrass.get_audit_logger(None)
+        ...         if logger is not None:
+        ...             logger.info(f"Found MY_VAR={MY_VAR!r}")
+        ...     return tracefunc
 
-        >>> hook = MyVarHook()
+        >>> hook = TracingHook(tracefunc)
 
         >>> @seagrass.audit(seagrass.auto, hooks=[hook])
         ... def example():
@@ -65,11 +63,15 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         ) -> t.Optional["TracingHook.TraceFunc"]:
             ...  # pragma: no cover
 
-    @abstractmethod
-    def tracefunc(
-        self, frame: FrameType, event: str, arg: t.Any
-    ) -> t.Optional[TraceFunc]:
-        ...  # pragma: no cover
+    def __init__(self, tracefunc: TraceFunc) -> None:
+        """Create a new TracingHook.
+
+        :param TraceFunc tracefunc: the function that should be used to perform tracing via
+            `sys.settrace`_.
+
+        .. _sys.settrace: https://docs.python.org/3/library/sys.html#sys.settrace
+        """
+        self.tracefunc = tracefunc
 
     # High prehook/posthook priority since we generally don't want to trace other
     # Seagrass hooks
@@ -95,12 +97,15 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         return _tracing_hook.get()
 
     def __create_tracefunc(
-        self, func: t.Optional["TraceFunc"],
+        self,
+        func: t.Optional["TraceFunc"],
     ) -> "TraceFunc":
         """A wrapper around the tracefunc function. This is the function that actually gets added
         with sys.settrace."""
 
-        def tracefunc(frame: FrameType, event: str, arg: t.Any) -> "TracingHook.TraceFunc":
+        def tracefunc(
+            frame: FrameType, event: str, arg: t.Any
+        ) -> "TracingHook.TraceFunc":
             if func is not None and self.is_active:
                 return self.__create_tracefunc(func(frame, event, arg))
             else:
@@ -131,7 +136,10 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         return old_event, exists_token, tracefunc_token
 
     def cleanup(
-        self, event_name: str, context: TracingHookContext, exc: t.Tuple[t.Any, ...],
+        self,
+        event_name: str,
+        context: TracingHookContext,
+        exc: t.Tuple[t.Any, ...],
     ) -> None:
         old_event, exists_token, tracefunc_token = context
 
@@ -141,6 +149,3 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         _tracing_hook.reset(tracefunc_token)
 
         sys.settrace(_tracing_hook.get())
-
-
-TracingHook.tracefunc.__doc__ = TracingHook.TraceFunc.__doc__
