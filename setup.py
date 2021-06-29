@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
 
 setup(
     name="seagrass",
-    version="0.7.0",
+    version="0.8.0",
     description="Auditing and profiling multi-tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
