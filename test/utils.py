@@ -1,5 +1,6 @@
 # Testing utilities and base classes for testing Seagrass
 
+import asyncio
 import logging
 import logging.config
 import sys
@@ -8,6 +9,15 @@ from functools import wraps
 from io import StringIO
 from seagrass import Auditor
 from seagrass.base import ProtoHook
+
+
+def async_test(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(func(*args, **kwargs))
+
+    return wrapper
 
 
 class SeagrassTestCaseMixin:

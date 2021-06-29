@@ -32,17 +32,6 @@ class CreateAuditorTestCase(unittest.TestCase):
     def setUp(self):
         self.logging_output = StringIO()
 
-    def test_default_logger_used_by_auditor(self):
-        # By default, Auditor should use the "seagrass" logger if no logger is specified
-        self._configure_logger(logging.getLogger("seagrass"))
-
-        auditor = Auditor()
-        auditor.logger.info("Hello, world!")
-        auditor.logger.debug("This message shouldn't appear")
-
-        output = self.logging_output.getvalue()
-        self.assertEqual(output, "(INFO) seagrass: Hello, world!\n")
-
     def test_use_custom_logger_for_auditor(self):
         # If a logger is explicitly specified, Auditor should use that logger instead
         # of the default. The logger can either be provided as a logging.Logger

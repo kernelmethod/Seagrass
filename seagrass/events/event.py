@@ -1,43 +1,37 @@
 import sys
 import seagrass._typing as t
-from contextlib import ExitStack
-from contextvars import ContextVar
+from abc import abstractmethod, ABCMeta
+from contextlib import contextmanager, ExitStack
+from functools import wraps
 from seagrass.base import ProtoHook
 
-from .contexts import EventData, HookExecutionContext
+from .contexts import EventData, HookExecutionContext, current_event
 
-# Context variable used to store the current event
-current_event: ContextVar[str] = ContextVar("seagrass_current_event")
-
-T = t.TypeVar("T")
-
-
-@t.overload
-def get_current_event(default: t.Missing) -> str:
-    ...  # pragma: no cover
-
-
-@t.overload
-def get_current_event(default: T) -> t.Union[str, T]:
-    ...  # pragma: no cover
-
-
-def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
-    """Get the current Seagrass event that is being executed.
-
-    :raises LookupError: if no Seagrass event is currently under execution.
-    """
-    if isinstance(default, t.Missing):
-        return current_event.get()
-    else:
-        return current_event.get(default)
-
+# Type variable used to represent the value returned by an event function
+R = t.TypeVar("R")
 
 # A type variable used to represent the function wrapped by an Event.
 F = t.Callable[..., t.Any]
 
+# Function decorators for the __call__ method of events
 
-class Event:
+
+def _check_enabled(func: t.Callable) -> t.Callable:
+    """Function decorator that checks whether the event is enabled before entering its body.
+    If the event is not enabled, it will skip over executing the body of the function and
+    just execute the wrapped function."""
+
+    @wraps(func)
+    def wrapper(self: Event, *args, **kwargs):
+        if not self.enabled:
+            return self.func(*args, **kwargs)
+        else:
+            return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+class Event(metaclass=ABCMeta):
     """Defines an event that is under audit. The event wraps around a function; instead of calling
     the function, we call the event, which first triggers any prehooks, *then* calls the function,
     and then triggers posthooks."""
@@ -52,7 +46,7 @@ class Event:
         "hooks",
         "prehook_audit_event_name",
         "posthook_audit_event_name",
-        "__hook_execution_order",
+        "_hook_execution_order",
     ]
 
     enabled: bool
@@ -61,7 +55,7 @@ class Event:
     hooks: t.List[ProtoHook]
     prehook_audit_event_name: str
     posthook_audit_event_name: str
-    __hook_execution_order: t.List[int]
+    _hook_execution_order: t.List[int]
 
     def __init__(
         self,
@@ -141,10 +135,43 @@ class Event:
         """Determine the order in which the events' hooks should be executed."""
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
-        self.__hook_execution_order = sorted(
+        self._hook_execution_order = sorted(
             range(len(self.hooks)), key=lambda i: (self.hooks[i].priority, i)
         )
 
+    @contextmanager
+    def _event_context(
+        self, args: t.Tuple[t.Any, ...], kwargs: t.Dict[str, t.Any]
+    ) -> t.Iterator[EventData]:
+        token = current_event.set(self.name)
+        event_data = EventData(self.name, args, kwargs)
+
+        try:
+            if self.raise_runtime_events:
+                sys.audit(self.prehook_audit_event_name, args, kwargs)
+
+            with ExitStack() as stack:
+                for hook_num in self._hook_execution_order:
+                    hook = self.hooks[hook_num]
+                    if hook.enabled:
+                        stack.enter_context(HookExecutionContext(hook, event_data))
+
+                yield event_data
+
+        finally:
+            try:
+                if self.raise_runtime_events:
+                    sys.audit(self.posthook_audit_event_name, event_data.result)
+            finally:
+                current_event.reset(token)
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs) -> t.Any:
+        ...  # pragma: no cover
+
+
+class SyncEvent(Event):
+    @_check_enabled
     def __call__(self, *args, **kwargs) -> t.Any:
         """Call the function wrapped by the Event. If the event is enabled, its prehooks and
         posthooks are executed before and after the execution of the wrapped function.
@@ -152,33 +179,28 @@ class Event:
         :param args: the arguments to pass to the wrapped function.
         :param kwargs: the keyword arguments to pass to the wrapped function.
         """
-        if not self.enabled:
-            # We just return the result of the wrapped function
-            return self.func(*args, **kwargs)
 
-        token = current_event.set(self.name)
+        with self._event_context(args, kwargs) as event_data:
+            event_data.result = self.func(*args, **kwargs)
 
-        if self.raise_runtime_events:
-            sys.audit(self.prehook_audit_event_name, args, kwargs)
-
-        event_data = EventData(self.name, args, kwargs)
-
-        try:
-            with ExitStack() as stack:
-                for hook_num in self.__hook_execution_order:
-                    hook = self.hooks[hook_num]
-                    if hook.enabled:
-                        stack.enter_context(HookExecutionContext(hook, event_data))
-
-                event_data.result = self.func(*args, **kwargs)
-
-            if event_data.result == t.MISSING:
-                # This point should never be reached
-                raise ValueError("Event result was not recorded")  # pragma: no cover
-
-            if self.raise_runtime_events:
-                sys.audit(self.posthook_audit_event_name, event_data.result)
-        finally:
-            current_event.reset(token)
+        if event_data.result == t.MISSING:
+            # This point should never be reached
+            raise ValueError("Event result was not recorded")  # pragma: no cover
 
         return event_data.result
+
+
+class AsyncEvent(Event):
+    @_check_enabled
+    async def __call__(self, *args, **kwargs) -> t.Any:
+        with self._event_context(args, kwargs) as event_data:
+            event_data.result = await self.func(*args, **kwargs)
+
+        if event_data.result == t.MISSING:
+            # This point should never be reached
+            raise ValueError("Event result was not recorded")  # pragma: no cover
+
+        return event_data.result
+
+
+AsyncEvent.__call__.__doc__ = SyncEvent.__call__.__doc__
