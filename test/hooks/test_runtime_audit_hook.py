@@ -20,7 +20,7 @@ class FileOpenTestHook(RuntimeAuditHook):
     FileOpenHook."""
 
     def __init__(self):
-        super().__init__(traceable=True)
+        super().__init__(self.sys_hook, traceable=True)
         self.total_file_opens = 0
 
     def sys_hook(self, event_name, args):
@@ -34,7 +34,7 @@ class ErroneousHook(RuntimeAuditHook):
     """A runtime audit hook that raises an error whenever sys_hook gets called."""
 
     def __init__(self):
-        super().__init__(propagate_errors=False, traceable=True)
+        super().__init__(self.sys_hook, propagate_errors=False, traceable=True)
 
     def sys_hook(self, event, args):
         raise ValueError("my_test_message")
