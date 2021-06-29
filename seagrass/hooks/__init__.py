@@ -1,4 +1,5 @@
 # flake8: noqa: F401
+from .context_manager_hook import ContextManagerHook
 from .counter_hook import CounterHook
 from .file_open_hook import FileOpenHook
 from .logging_hook import LoggingHook

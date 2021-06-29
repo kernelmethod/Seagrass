@@ -1,6 +1,7 @@
 # flake8: noqa: F401
 import seagrass._typing as t
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
+from .events import get_current_event
 from . import base, errors, events, hooks
 from contextvars import ContextVar
 
@@ -134,6 +135,7 @@ __all__ = [
     "DEFAULT_LOGGER_NAME",
     "Auditor",
     "get_audit_logger",
+    "get_current_event",
     "global_auditor",
     "create_global_auditor",
     "auto",

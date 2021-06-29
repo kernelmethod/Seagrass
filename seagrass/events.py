@@ -1,20 +1,64 @@
 import sys
 import seagrass._typing as t
+from contextvars import ContextVar
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
+from types import TracebackType
+
+# Context variable used to store the current event
+current_event: ContextVar[str] = ContextVar("seagrass_current_event")
+
+T = t.TypeVar("T")
+
+
+@t.overload
+def get_current_event(default: t.Missing) -> str:
+    ...
+
+
+@t.overload
+def get_current_event(default: T) -> t.Union[str, T]:
+    ...
+
+
+def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
+    """Get the current Seagrass event that is being executed.
+
+    :raises LookupError: if no Seagrass event is currently under execution.
+    """
+    if isinstance(default, t.Missing):
+        return current_event.get()
+    else:
+        return current_event.get(default)
+
 
 # A type variable used to represent the function wrapped by an Event.
 F = t.Callable[..., t.Any]
 
 
-class __MissingHookContext:
-    __slots__: t.List[str] = []
+class _HookErrorCapture:
+    """A context manager object used to capture errors when running the prehooks and function used
+    by a Seagrass event."""
 
-    def __repr__(self):
-        return "<Event.MISSING_CONTEXT>"
+    exc: t.Tuple[t.Optional[Exception], t.Optional[str], t.Optional[TracebackType]]
+    __exception_raised: t.Optional[bool] = None
 
+    @property
+    def exception_raised(self):
+        if self.__exception_raised is None:
+            self.__exception_raised = self.exc != (None, None, None)
+        return self.__exception_raised
 
-MISSING_CONTEXT: t.Final[__MissingHookContext] = __MissingHookContext()
+    def __enter__(self):
+        return self
+
+    def __exit__(
+        self,
+        exc_type: t.Optional[Exception],
+        exc_val: t.Optional[str],
+        traceback: t.Optional[TracebackType],
+    ):
+        self.exc = (exc_type, exc_val, traceback)
 
 
 class Event:
@@ -141,27 +185,22 @@ class Event:
             # We just return the result of the wrapped function
             return self.func(*args, **kwargs)
 
+        token = current_event.set(self.name)
+
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
-        # We use exception_raised to tell us whether or not an exception was raised in thej
-        # course of executing the event and the hooks. If an exception *was* raised, then
-        # we only call hooks' cleanup stages, and ignore the posthooks.
-        exception_raised = None
+        prehook_contexts = {}
 
         try:
-            prehook_contexts = {}
-            for hook_num in self.__prehook_execution_order:
-                hook = self.hooks[hook_num]
-                if hook.enabled:
-                    context = hook.prehook(self.name, args, kwargs)
-                    prehook_contexts[hook_num] = context
+            with _HookErrorCapture() as cap:
+                for hook_num in self.__prehook_execution_order:
+                    hook = self.hooks[hook_num]
+                    if hook.enabled:
+                        context = hook.prehook(self.name, args, kwargs)
+                        prehook_contexts[hook_num] = context
 
-            result = self.func(*args, **kwargs)
-
-        except Exception as ex:
-            exception_raised = ex
-            raise ex
+                result = self.func(*args, **kwargs)
 
         finally:
             posthook_exceptions = []
@@ -171,19 +210,22 @@ class Event:
                 # In some cases (e.g., if a prehook raises an Exception), a context may
                 # not exist for a given hook. We only execute the posthook and cleanup
                 # if a context exists.
-                context = prehook_contexts.get(hook_num, MISSING_CONTEXT)
-                if context != MISSING_CONTEXT:
+                context = prehook_contexts.get(hook_num, t.MISSING)
+                if context != t.MISSING:
                     hook = self.hooks[hook_num]
-                    if exception_raised is None:
+                    if not cap.exception_raised:
                         try:
                             hook.posthook(self.name, result, context)
                         except Exception as ex:
                             posthook_exceptions.append(ex)
                     if isinstance(hook, CleanupHook):
                         try:
-                            hook.cleanup(self.name, context, exception_raised)
+                            hook.cleanup(self.name, context, cap.exc)
                         except Exception as ex:
                             posthook_exceptions.append(ex)
+
+            # Reset the global current_event back to its original value
+            current_event.reset(token)
 
             # If one or more exceptions were thrown while processing the posthooks, we now
             # bubble up those errors.
