@@ -226,8 +226,6 @@ class GlobalAuditorTestCase(unittest.TestCase):
 
         with seagrass.create_global_auditor() as auditor:
             self.assertEqual(seagrass.global_auditor(), auditor)
-            self.assertEqual(seagrass.audit, auditor.audit)
-            self.assertEqual(seagrass.create_event, auditor.create_event)
 
             # Any events created inside of this context should be created with the new auditor
             @seagrass.audit("test.foo", hooks=[hook])
@@ -237,8 +235,6 @@ class GlobalAuditorTestCase(unittest.TestCase):
         # Outside of the context, the auditor should be set back to the original
         # global auditor.
         self.assertNotEqual(seagrass.global_auditor(), auditor)
-        self.assertNotEqual(seagrass.audit, auditor.audit)
-        self.assertNotEqual(seagrass.create_event, auditor.create_event)
 
         # Events created inside of the context should only be raised with the newly-created
         # auditor.
@@ -254,11 +250,8 @@ class GlobalAuditorTestCase(unittest.TestCase):
         auditor = Auditor()
         with seagrass.create_global_auditor(auditor):
             self.assertEqual(seagrass.global_auditor(), auditor)
-            self.assertEqual(seagrass.audit, auditor.audit)
-            self.assertEqual(seagrass.create_event, auditor.create_event)
 
-        self.assertNotEqual(seagrass.audit, auditor.audit)
-        self.assertNotEqual(seagrass.create_event, auditor.create_event)
+        self.assertNotEqual(seagrass.global_auditor(), auditor)
 
 
 if __name__ == "__main__":
