@@ -148,8 +148,11 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         inner_auditor = Auditor(logger="inner")
         self.assertNotEqual(outer_auditor.logger, inner_auditor.logger)
 
-        # Outside of an auditing context, get_audit_logger should return None
-        self.assertEqual(get_audit_logger(), None)
+        # Outside of an auditing context, get_audit_logger should return the default value
+        # (or otherwise raise a LookupError)
+        self.assertEqual(get_audit_logger(None), None)
+        with self.assertRaises(LookupError):
+            get_audit_logger()
 
         # Within an auditing context, get_audit_logger() should return the logger
         # for the most recent auditing context.
@@ -162,8 +165,10 @@ class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
             self.assertEqual(get_audit_logger(), outer_auditor.logger)
 
         # Now that we're back outside of an auditing context, get_audit_logger()
-        # should once again return None.
-        self.assertEqual(get_audit_logger(), None)
+        # should once again raise an error/return the default
+        self.assertEqual(get_audit_logger(None), None)
+        with self.assertRaises(LookupError):
+            get_audit_logger()
 
     def test_filter_events(self):
         hook = seagrass.hooks.CounterHook()

@@ -135,7 +135,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]], metaclass=ABCMeta):
                     if self.propagate_errors:
                         raise ex
                     else:
-                        logger = get_audit_logger()
+                        logger = get_audit_logger(None)
                         if logger is not None:
                             # Temporarily disable the hook, since emitting a log could create new
                             # runtime events. In some cases this could lead to an infinite recursion.

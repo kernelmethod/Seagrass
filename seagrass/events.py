@@ -9,27 +9,32 @@ from types import TracebackType
 # Context variable used to store the current event
 current_event: ContextVar[str] = ContextVar("seagrass_current_event")
 
+T = t.TypeVar("T")
 
-def get_current_event() -> str:
+
+@t.overload
+def get_current_event(default: t.Missing) -> str:
+    ...
+
+
+@t.overload
+def get_current_event(default: T) -> t.Union[str, T]:
+    ...
+
+
+def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
     """Get the current Seagrass event that is being executed.
 
     :raises LookupError: if no Seagrass event is currently under execution.
     """
-    return current_event.get()
+    if isinstance(default, t.Missing):
+        return current_event.get()
+    else:
+        return current_event.get(default)
 
 
 # A type variable used to represent the function wrapped by an Event.
 F = t.Callable[..., t.Any]
-
-
-class __MissingHookContext:
-    __slots__: t.List[str] = []
-
-    def __repr__(self):
-        return "<Event.MISSING_CONTEXT>"
-
-
-MISSING_CONTEXT: t.Final[__MissingHookContext] = __MissingHookContext()
 
 
 class _HookErrorCapture:
@@ -203,8 +208,8 @@ class Event:
                 # In some cases (e.g., if a prehook raises an Exception), a context may
                 # not exist for a given hook. We only execute the posthook and cleanup
                 # if a context exists.
-                context = prehook_contexts.get(hook_num, MISSING_CONTEXT)
-                if context != MISSING_CONTEXT:
+                context = prehook_contexts.get(hook_num, t.MISSING)
+                if context != t.MISSING:
                     hook = self.hooks[hook_num]
                     if not cap.exception_raised:
                         try:

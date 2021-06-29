@@ -42,7 +42,7 @@ class LoggingHook(ProtoHook[None]):
         if self.prehook_msg is None:
             pass
         else:
-            logger = get_audit_logger()
+            logger = get_audit_logger(None)
             if logger is not None:
                 logger.log(self.loglevel, self.prehook_msg(event_name, args, kwargs))
 
@@ -55,6 +55,6 @@ class LoggingHook(ProtoHook[None]):
         if self.posthook_msg is None:
             pass
         else:
-            logger = get_audit_logger()
+            logger = get_audit_logger(None)
             if logger is not None:
                 logger.log(self.loglevel, self.posthook_msg(event_name, result))
