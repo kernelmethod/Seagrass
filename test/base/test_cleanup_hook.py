@@ -106,7 +106,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
 
             self.assertEqual(self.hook_a.counter, 1)
             self.assertEqual(self.hook_b.counter, 2)
-            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_b.exception[0], RuntimeError)
 
     def test_hooks_b_and_c(self):
         # Tests for _HookC + _HookB
@@ -120,8 +120,8 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
             # hook_c.cleanup are called.
             self.assertEqual(self.hook_b.counter, 1)
             self.assertEqual(self.hook_c.counter, 1)
-            self.assertEqual(self.hook_b.exception, None)
-            self.assertEqual(self.hook_c.exception, None)
+            self.assertEqual(self.hook_b.exception, (None, None, None))
+            self.assertEqual(self.hook_c.exception, (None, None, None))
 
             # Despite the fact that an error is raised in the posthook, we should prioritize
             # the error that was raised by the wrapped function.
@@ -132,8 +132,8 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                 self.ex = ex
             self.assertEqual(self.hook_b.counter, 2)
             self.assertEqual(self.hook_c.counter, 2)
-            self.assertEqual(self.hook_b.exception, self.ex)
-            self.assertEqual(self.hook_c.exception, self.ex)
+            self.assertEqual(self.hook_b.exception[0], RuntimeError)
+            self.assertEqual(self.hook_c.exception[0], RuntimeError)
 
     def test_hooks_b_and_d(self):
         # Tests for _HookD + _HookB, and _HookB + _HookD
@@ -170,7 +170,7 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                 self.ex = ex
             self.assertEqual(self.hook_b.counter, 1)
             self.assertEqual(self.hook_d.counter, 0)
-            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_b.exception[0], AssertionError)
             self.assertEqual(self.hook_d.exception, None)
 
             try:
@@ -180,5 +180,5 @@ class CleanupHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
                 self.ex = ex
             self.assertEqual(self.hook_b.counter, 2)
             self.assertEqual(self.hook_d.counter, 0)
-            self.assertEqual(self.hook_b.exception, self.ex)
+            self.assertEqual(self.hook_b.exception[0], AssertionError)
             self.assertEqual(self.hook_d.exception, None)

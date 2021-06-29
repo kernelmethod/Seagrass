@@ -132,7 +132,7 @@ class TracingHook(CleanupHook[TracingHookContext], metaclass=ABCMeta):
         return old_event, exists_token, tracefunc_token
 
     def cleanup(
-        self, event_name: str, context: TracingHookContext, exc: t.Optional[Exception]
+        self, event_name: str, context: TracingHookContext, exc: t.Tuple[t.Any, ...],
     ) -> None:
         old_event, exists_token, tracefunc_token = context
 
