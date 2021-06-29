@@ -214,6 +214,12 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
             foo()
             bar()
 
+        # We should be able to specify a default value for get_current_event(). If no default is
+        # specified and an event isn't being executed, an exception should be thrown.
+        self.assertEqual(get_current_event(None), None)
+        with self.assertRaises(LookupError):
+            get_current_event()
+
 
 if __name__ == "__main__":
     unittest.main()

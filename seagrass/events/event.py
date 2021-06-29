@@ -14,12 +14,12 @@ T = t.TypeVar("T")
 
 @t.overload
 def get_current_event(default: t.Missing) -> str:
-    ...
+    ...  # pragma: no cover
 
 
 @t.overload
 def get_current_event(default: T) -> t.Union[str, T]:
-    ...
+    ...  # pragma: no cover
 
 
 def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
@@ -173,7 +173,8 @@ class Event:
                 event_data.result = self.func(*args, **kwargs)
 
             if event_data.result == t.MISSING:
-                raise ValueError("Event result was not recorded")
+                # This point should never be reached
+                raise ValueError("Event result was not recorded")  # pragma: no cover
 
             if self.raise_runtime_events:
                 sys.audit(self.posthook_audit_event_name, event_data.result)
