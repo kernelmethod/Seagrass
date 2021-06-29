@@ -39,7 +39,7 @@ class TracingHook(CleanupHook[TracingHookContext]):
         ...         logger = seagrass.get_audit_logger(None)
         ...         if logger is not None:
         ...             logger.info(f"Found MY_VAR={MY_VAR!r}")
-        ...     return self.tracefunc
+        ...     return tracefunc
 
         >>> hook = TracingHook(tracefunc)
 

@@ -32,7 +32,7 @@ class RuntimeAuditHook(ProtoHook[t.Optional[str]]):
 
         >>> class RuntimeEventCounterHook(RuntimeAuditHook):
         ...     def __init__(self):
-        ...         super().__init__()
+        ...         super().__init__(self.sys_hook)
         ...
         ...     def sys_hook(self, event, args):
         ...         print(f"Encountered event={event!r} with args={args}")
