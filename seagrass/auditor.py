@@ -222,6 +222,8 @@ class Auditor:
             unique. This parameter can either be a string, or it can be a function that takes the
             audited function and creates a string from it, e.g.
             ``event_name = lambda func: f"event.{func.__name__}"``.
+        :param bool use_async: wrap the function in an asynchronous event. This should be set to
+            ``True`` if ``func`` is ``async``.
         :param Optional[Callable] func: the function that should be wrapped in a new event.
         :param Optional[List[ProtoHook]] hooks: a list of hooks to call whenever the new event is
             triggered.
@@ -316,7 +318,10 @@ class Auditor:
     def async_audit(
         self, *args, **kwargs
     ) -> t.Union[AuditDecorator[F], AuditedFunc[F]]:
-        result = self.audit(*args, **kwargs)
+        """Call :py:meth:`audit` with `use_async=True`. See the documentation for :py:meth:`audit`
+        for more information.
+        """
+        result = self.audit(*args, use_async=True, **kwargs)
         return t.cast(t.Union[AuditDecorator[F], AuditedFunc[F]], result)
 
     def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:

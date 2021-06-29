@@ -11,7 +11,7 @@ current_event: ContextVar[str] = ContextVar("seagrass_current_event")
 
 
 @t.overload
-def get_current_event(default: t.Missing) -> str:
+def get_current_event() -> str:
     ...  # pragma: no cover
 
 
