@@ -3,7 +3,7 @@ import seagrass._typing as t
 from seagrass import get_audit_logger
 from seagrass.base import ProtoHook
 
-log_input_t = str
+log_input_t = t.Union[str, t.Tuple[t.Any, ...]]
 prehook_msg_t = t.Callable[[str, t.Tuple[t.Any, ...], t.Dict[str, t.Any]], log_input_t]
 posthook_msg_t = t.Callable[[str, t.Any], log_input_t]
 
@@ -44,7 +44,11 @@ class LoggingHook(ProtoHook[None]):
         else:
             logger = get_audit_logger(None)
             if logger is not None:
-                logger.log(self.loglevel, self.prehook_msg(event_name, args, kwargs))
+                msg = self.prehook_msg(event_name, args, kwargs)
+                if isinstance(msg, str):
+                    logger.log(self.loglevel, msg)
+                else:
+                    logger.log(self.loglevel, *msg)
 
     def posthook(
         self,
@@ -57,4 +61,8 @@ class LoggingHook(ProtoHook[None]):
         else:
             logger = get_audit_logger(None)
             if logger is not None:
-                logger.log(self.loglevel, self.posthook_msg(event_name, result))
+                msg = self.posthook_msg(event_name, result)
+                if isinstance(msg, str):
+                    logger.log(self.loglevel, msg)
+                else:
+                    logger.log(self.loglevel, *msg)
