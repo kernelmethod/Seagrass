@@ -164,24 +164,9 @@ Their are two ways to change the order in which hooks are run:
       posthook: event_name='sleep_ex_2', result=None, context=None
       Time spent in sleep_ex_2: 0.1s
 
-2. Set a ``prehook_priority`` and/or ``posthook_priority`` on your hooks.
-   Seagrass calls :py:func:`seagrass.base.prehook_priority` and
-   :py:func:`seagrass.base.posthook_priority` on audit hooks to see if they
-   have an explicit priority set for them. For hooks that don't have a priority
-   set, their priority is assumed to be the default value of ``0``.
-
-   ``prehook_priority`` and ``posthook_priority`` are interpreted as follows:
-
-   - If you set ``hook.prehook_priority`` to be high, its prehook will be
-     executed *after* prehooks with lower priority.
-   - If you set ``hook.posthook_priority`` to be low, its prehook will be
-     executed *before* posthooks with lower priority.
-
-   The rationale here is that priority signals how closely a prehook or posthook
-   should be executed relative to when the function wrapped by an event is
-   called. For profiling-related hooks this is especially important, since
-   ideally a profiling hook should only collect statistics from the execution of
-   an event and not from the execution of other hooks.
+2. Set a ``priority`` on your hooks (i.e. ``hook.priority``). Hooks with high
+   priority will have their prehook executed *after* and its posthook executed
+   *before* hooks with lower priority.
 
    .. doctest:: custom-hooks
 
@@ -189,31 +174,18 @@ Their are two ways to change the order in which hooks are run:
 
       >>> ah = ArgsHook()
 
-      >>> # Test with high prehook and posthook priorities for ElapsedTimeHook
+      >>> # Test with hook priority for ElapsedTimeHook
 
-      >>> th.prehook_priority = 10; th.posthook_priority = 10;
+      >>> th.priority = 10
 
-      >>> ausleep = auditor.audit("priority_ex_1", time.sleep, hooks=[th, ah])
-
-      >>> with auditor.start_auditing():
-      ...     ausleep(0.1)
-      prehook: event_name='priority_ex_1', args=(0.1,), kwargs={}
-      Getting start time for priority_ex_1...
-      Time spent in priority_ex_1: 0.1s
-      posthook: event_name='priority_ex_1', result=None, context=None
-
-      >>> # Test with low prehook/high posthook priority
-
-      >>> th.prehook_priority = -10
-
-      >>> ausleep = auditor.audit("priority_ex_2", time.sleep, hooks=[th, ah])
+      >>> ausleep = auditor.audit("priority_ex", time.sleep, hooks=[th, ah])
 
       >>> with auditor.start_auditing():
       ...     ausleep(0.1)
-      Getting start time for priority_ex_2...
-      prehook: event_name='priority_ex_2', args=(0.1,), kwargs={}
-      Time spent in priority_ex_2: 0.1s
-      posthook: event_name='priority_ex_2', result=None, context=None
+      prehook: event_name='priority_ex', args=(0.1,), kwargs={}
+      Getting start time for priority_ex...
+      Time spent in priority_ex: 0.1s
+      posthook: event_name='priority_ex', result=None, context=None
 
 
 -----------------------

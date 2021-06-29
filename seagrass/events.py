@@ -76,8 +76,7 @@ class Event:
         "hooks",
         "prehook_audit_event_name",
         "posthook_audit_event_name",
-        "__prehook_execution_order",
-        "__posthook_execution_order",
+        "__hook_execution_order",
     ]
 
     enabled: bool
@@ -86,8 +85,7 @@ class Event:
     hooks: t.List[ProtoHook]
     prehook_audit_event_name: str
     posthook_audit_event_name: str
-    __prehook_execution_order: t.List[int]
-    __posthook_execution_order: t.List[int]
+    __hook_execution_order: t.List[int]
 
     def __init__(
         self,
@@ -167,11 +165,8 @@ class Event:
         """Determine the order in which the events' hooks should be executed."""
         # - Prehooks are ordered by ascending priority, then ascending list position
         # - Posthooks are ordered by descending priority, then descending list position
-        self.__prehook_execution_order = sorted(
-            range(len(self.hooks)), key=lambda i: (self.hooks[i].prehook_priority, i)
-        )
-        self.__posthook_execution_order = sorted(
-            range(len(self.hooks)), key=lambda i: (-self.hooks[i].posthook_priority, -i)
+        self.__hook_execution_order = sorted(
+            range(len(self.hooks)), key=lambda i: (self.hooks[i].priority, i)
         )
 
     def __call__(self, *args, **kwargs) -> t.Any:
@@ -190,15 +185,15 @@ class Event:
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
-        prehook_contexts = {}
+        hook_contexts = []
 
         try:
             with _HookErrorCapture() as cap:
-                for hook_num in self.__prehook_execution_order:
+                for hook_num in self.__hook_execution_order:
                     hook = self.hooks[hook_num]
                     if hook.enabled:
                         context = hook.prehook(self.name, args, kwargs)
-                        prehook_contexts[hook_num] = context
+                        hook_contexts.append(context)
 
                 result = self.func(*args, **kwargs)
 
@@ -206,23 +201,21 @@ class Event:
             posthook_exceptions = []
 
             # Execute posthooks and cleanup stages by order of their priority.
-            for hook_num in self.__posthook_execution_order:
-                # In some cases (e.g., if a prehook raises an Exception), a context may
-                # not exist for a given hook. We only execute the posthook and cleanup
-                # if a context exists.
-                context = prehook_contexts.get(hook_num, t.MISSING)
-                if context != t.MISSING:
-                    hook = self.hooks[hook_num]
-                    if not cap.exception_raised:
-                        try:
-                            hook.posthook(self.name, result, context)
-                        except Exception as ex:
-                            posthook_exceptions.append(ex)
-                    if isinstance(hook, CleanupHook):
-                        try:
-                            hook.cleanup(self.name, context, cap.exc)
-                        except Exception as ex:
-                            posthook_exceptions.append(ex)
+            execution_order = self.__hook_execution_order[:len(hook_contexts)]
+            execution_order.reverse()
+            hook_contexts.reverse()
+            for (hook_num, context) in zip(execution_order, hook_contexts):
+                hook = self.hooks[hook_num]
+                if not cap.exception_raised:
+                    try:
+                        hook.posthook(self.name, result, context)
+                    except Exception as ex:
+                        posthook_exceptions.append(ex)
+                if isinstance(hook, CleanupHook):
+                    try:
+                        hook.cleanup(self.name, context, cap.exc)
+                    except Exception as ex:
+                        posthook_exceptions.append(ex)
 
             # Reset the global current_event back to its original value
             current_event.reset(token)
