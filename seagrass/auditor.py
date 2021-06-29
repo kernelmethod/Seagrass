@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
 from seagrass.errors import EventNotFoundError
-from seagrass.events import Event
+from seagrass.events import Event, AsyncEvent, SyncEvent
 
 # The name of the default logger used by Seagrass
 DEFAULT_LOGGER_NAME: t.Final[str] = "seagrass"
@@ -203,7 +203,6 @@ class Auditor:
         self,
         event_name: t.Union[str, t.Callable[[F], str]],
         func: F,
-        hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
     ) -> AuditedFunc[F]:
         ...  # pragma: no cover
@@ -213,6 +212,7 @@ class Auditor:
         event_name: t.Union[str, t.Callable[[F], str]],
         func: t.Optional[F] = None,
         hooks: t.Optional[t.List[ProtoHook]] = None,
+        use_async: bool = False,
         **kwargs,
     ) -> t.Union[AuditDecorator[F], AuditedFunc[F]]:
         """Wrap a function with a new auditing event. You can call ``audit`` either as a function
@@ -269,7 +269,9 @@ class Auditor:
         if func is None:
 
             def decorator(func: F) -> AuditedFunc[F]:
-                return self.audit(event_name, func, hooks=hooks, **kwargs)
+                return self.audit(
+                    event_name, func, hooks=hooks, use_async=use_async, **kwargs
+                )
 
             return decorator
 
@@ -287,7 +289,13 @@ class Auditor:
         for hook in hooks:
             self.hooks.add(hook)
 
-        new_event = Event(func, event_name, hooks=hooks, **kwargs)
+        if use_async:
+            new_event: t.Union[AsyncEvent, SyncEvent] = AsyncEvent(
+                func, event_name, hooks=hooks, **kwargs
+            )
+        else:
+            new_event = SyncEvent(func, event_name, hooks=hooks, **kwargs)
+
         self.events[event_name] = new_event
 
         @functools.wraps(func)
@@ -304,6 +312,12 @@ class Auditor:
 
         self.event_wrappers[event_name] = wrapper
         return wrapper
+
+    def async_audit(
+        self, *args, **kwargs
+    ) -> t.Union[AuditDecorator[F], AuditedFunc[F]]:
+        result = self.audit(*args, **kwargs)
+        return t.cast(t.Union[AuditDecorator[F], AuditedFunc[F]], result)
 
     def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:
         """Create a new "empty" event. When this event is executed, it runs any hooks that are

@@ -1,8 +1,10 @@
 # flake8: noqa: F401
 
-from .event import Event, get_current_event
+from .contexts import get_current_event
+from .event import Event, AsyncEvent, SyncEvent
 
 __all__ = [
-    "Event",
+    "AsyncEvent",
+    "SyncEvent",
     "get_current_event",
 ]
