@@ -1,9 +1,22 @@
 import sys
 import seagrass._typing as t
+from contextvars import ContextVar
 from functools import cached_property
 from seagrass.base import ProtoHook, CleanupHook
 from seagrass.errors import PosthookError
 from types import TracebackType
+
+# Context variable used to store the current event
+current_event: ContextVar[str] = ContextVar("seagrass_current_event")
+
+
+def get_current_event() -> str:
+    """Get the current Seagrass event that is being executed.
+
+    :raises LookupError: if no Seagrass event is currently under execution.
+    """
+    return current_event.get()
+
 
 # A type variable used to represent the function wrapped by an Event.
 F = t.Callable[..., t.Any]
@@ -165,6 +178,8 @@ class Event:
             # We just return the result of the wrapped function
             return self.func(*args, **kwargs)
 
+        token = current_event.set(self.name)
+
         if self.raise_runtime_events:
             sys.audit(self.prehook_audit_event_name, args, kwargs)
 
@@ -201,6 +216,9 @@ class Event:
                             hook.cleanup(self.name, context, cap.exc)
                         except Exception as ex:
                             posthook_exceptions.append(ex)
+
+            # Reset the global current_event back to its original value
+            current_event.reset(token)
 
             # If one or more exceptions were thrown while processing the posthooks, we now
             # bubble up those errors.
