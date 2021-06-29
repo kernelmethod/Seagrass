@@ -194,6 +194,8 @@ class Auditor:
         self,
         event_name: t.Union[str, t.Callable[[F], str]],
         func: None,
+        hooks: t.Optional[t.List[ProtoHook]] = None,
+        use_async: bool = False,
         **kwargs,
     ) -> AuditDecorator[F]:
         ...  # pragma: no cover
@@ -203,6 +205,8 @@ class Auditor:
         self,
         event_name: t.Union[str, t.Callable[[F], str]],
         func: F,
+        hooks: t.Optional[t.List[ProtoHook]] = None,
+        use_async: bool = False,
         **kwargs,
     ) -> AuditedFunc[F]:
         ...  # pragma: no cover
@@ -316,13 +320,16 @@ class Auditor:
         return wrapper
 
     def async_audit(
-        self, *args, **kwargs
+        self,
+        event_name: t.Union[str, t.Callable[[F], str]],
+        func: t.Optional[F] = None,
+        hooks: t.Optional[t.List[ProtoHook]] = None,
+        **kwargs,
     ) -> t.Union[AuditDecorator[F], AuditedFunc[F]]:
         """Call :py:meth:`audit` with `use_async=True`. See the documentation for :py:meth:`audit`
         for more information.
         """
-        result = self.audit(*args, use_async=True, **kwargs)
-        return t.cast(t.Union[AuditDecorator[F], AuditedFunc[F]], result)
+        return self.audit(event_name, func, use_async=True, hooks=hooks, **kwargs)
 
     def create_event(self, event_name: str, **kwargs) -> t.Callable[..., None]:
         """Create a new "empty" event. When this event is executed, it runs any hooks that are
