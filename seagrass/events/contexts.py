@@ -63,7 +63,7 @@ class HookExecutionContext(t.Generic[T]):
         tb: t.Optional[TracebackType],
     ) -> None:
         try:
-            if self.data.result != t.MISSING:
+            if not isinstance(self.data.result, t.Missing):
                 self.hook.posthook(
                     self.data.event_name, self.data.result, self.prehook_context
                 )

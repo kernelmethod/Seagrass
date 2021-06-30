@@ -183,7 +183,7 @@ class SyncEvent(Event):
         with self._event_context(args, kwargs) as event_data:
             event_data.result = self.func(*args, **kwargs)
 
-        if event_data.result == t.MISSING:
+        if isinstance(event_data.result, t.Missing):
             # This point should never be reached
             raise ValueError("Event result was not recorded")  # pragma: no cover
 
@@ -196,7 +196,7 @@ class AsyncEvent(Event):
         with self._event_context(args, kwargs) as event_data:
             event_data.result = await self.func(*args, **kwargs)
 
-        if event_data.result == t.MISSING:
+        if isinstance(event_data.result, t.Missing):
             # This point should never be reached
             raise ValueError("Event result was not recorded")  # pragma: no cover
 
