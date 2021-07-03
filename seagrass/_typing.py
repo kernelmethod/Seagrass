@@ -4,71 +4,53 @@
 # Seagrass code should import type annotations from this module rather
 # than from `typing` to ensure version compatibility
 
-import sys
-import typing as t
+from sys import version_info as _version_info
 
-if sys.version_info < (3, 8):
-    import typing_extensions as t_ext
+# Bring all of the attributes of typing into scope
+from typing import *
 
-    t.Final = t_ext.Final
-    t.Literal = t_ext.Literal
-    t.Protocol = t_ext.Protocol
-    t.runtime_checkable = t_ext.runtime_checkable
+# Attributes that must be brought in from typing_extensions for Python < 3.8
+_extended_attrs = ("Final", "Literal", "Protocol", "runtime_checkable")
 
-from typing import (
-    Any,
-    Callable,
-    Counter,
-    ContextManager,
-    DefaultDict,
-    Dict,
-    Final,
-    Generic,
-    Iterator,
-    List,
-    Literal,
-    NamedTuple,
-    Optional,
-    Protocol,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-    runtime_checkable,
-)
+if _version_info < (3, 8):
+    import typing as _t
+    import typing_extensions as _t_ext
 
-# Unique type used throughout Seagrass to represent a missing value
+    for attr in _extended_attrs:
+        setattr(_t, attr, getattr(_t_ext, attr))
+
+        # Dynamically bring the newly-added attribute into scope
+        globals().update({attr: getattr(_t, attr)})
 
 
 class Missing:
-    __slots__: t.List[str] = []
+    """Unique type used throughout Seagrass to represent a missing value."""
+
+    __slots__: List[str] = []
 
     def __repr__(self) -> str:
-        return f"<seagrass._typing.{self.__class__.__name__}"
+        return f"<{__name__}.{self.__class__.__name__}>"
 
 
-MISSING: t.Final[Missing] = Missing()
+MISSING: Final[Missing] = Missing()
 
-T = t.TypeVar("T")
+_T = TypeVar("_T")
 
 # Maybe[T] is a type that represents a value that is potentially missing its value.
 # This is distinct from Optional[T], which represents a value that could have type
 # T or that could be None. In cases where a None value should be allowed, this type
 # may be used instead.
-Maybe = t.Union[T, Missing]
+Maybe = Union[_T, Missing]
 
-F = t.TypeVar("F", bound=t.Callable)
+_F = TypeVar("_F", bound=Callable)
 
 
-class AuditedFunc(t.Protocol[F]):
+class AuditedFunc(Protocol[_F]):
     __event_name__: str
-    __call__: F
+    __call__: _F
 
 
-class AuditDecorator(t.Protocol[F]):
+class AuditDecorator(Protocol[_F]):
     @property
-    def __call__(self) -> t.Callable[[F], AuditedFunc[F]]:
+    def __call__(self) -> Callable[[_F], AuditedFunc[_F]]:
         ...
