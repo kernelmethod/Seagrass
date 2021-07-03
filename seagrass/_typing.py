@@ -13,14 +13,11 @@ from typing import *
 _extended_attrs = ("Final", "Literal", "Protocol", "runtime_checkable")
 
 if _version_info < (3, 8):
-    import typing as _t
     import typing_extensions as _t_ext
-
     for attr in _extended_attrs:
-        setattr(_t, attr, getattr(_t_ext, attr))
-
-        # Dynamically bring the newly-added attribute into scope
-        globals().update({attr: getattr(_t, attr)})
+        # Dynamically bring the attribute into scope by updating the globals
+        # dictionary
+        globals().update({attr: getattr(_t_ext, attr)})
 
 
 class Missing:
