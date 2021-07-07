@@ -5,21 +5,28 @@
 # than from `typing` to ensure version compatibility
 
 from sys import version_info as _version_info
-
-# Bring all of the attributes of typing into scope
 from typing import *
 
-# Attributes that must be brought in from typing_extensions for Python < 3.8
-_extended_attrs = ("Final", "Literal", "Protocol", "runtime_checkable")
+# The __all__ list includes all of the attributes of typing that were
+# brought into scope.
+import typing as _t
+
+__all__: List[str] = []
+__all__ += _t.__all__  # type: ignore[attr-defined]
+
+# Import additional attributes for Python < 3.8
+_extended_attrs = ["Final", "Literal", "Protocol", "runtime_checkable"]
 
 if _version_info < (3, 8):
     import typing_extensions as _t_ext
-    for attr in _extended_attrs:
+
+    for attr in filter(lambda attr: attr not in __all__, _extended_attrs):
         # Dynamically bring the attribute into scope by updating the globals
         # dictionary
         globals().update({attr: getattr(_t_ext, attr)})
+        __all__.append(attr)
 
-
+# Additional types for Seagrass:
 class Missing:
     """Unique type used throughout Seagrass to represent a missing value."""
 
@@ -51,3 +58,16 @@ class AuditDecorator(Protocol[_F]):
     @property
     def __call__(self) -> Callable[[_F], AuditedFunc[_F]]:
         ...
+
+
+# Add additional types to the __all__ list:
+
+__all__ += [
+    "Missing",
+    "MISSING",
+    "Maybe",
+    "AuditedFunc",
+    "AuditDecorator",
+]
+
+__all__ = sorted(__all__)
