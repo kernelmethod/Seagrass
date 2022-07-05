@@ -1,5 +1,6 @@
 -r requirements.txt
-black==21.5b2
+black==22.6.0
+mypy==0.961
 pre-commit==2.13.0
 pytest==6.2.4
 pytest-cov==2.12.1

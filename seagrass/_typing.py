@@ -46,17 +46,21 @@ _T = TypeVar("_T")
 # may be used instead.
 Maybe = Union[_T, Missing]
 
+_R = TypeVar("_R")
 _F = TypeVar("_F", bound=Callable)
+_FR = TypeVar("_FR", bound=Callable[..., _R])
 
 
-class AuditedFunc(Protocol[_F]):
+class AuditedFunc(_t.Generic[_FR]):
+
     __event_name__: str
-    __call__: _F
+
+    def __call__(*args, **kwargs) -> _R:
+        ...
 
 
-class AuditDecorator(Protocol[_F]):
-    @property
-    def __call__(self) -> Callable[[_F], AuditedFunc[_F]]:
+class AuditDecorator(Protocol):
+    def __call__(self, func: _F) -> _F:
         ...
 
 
