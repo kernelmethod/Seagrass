@@ -183,7 +183,7 @@ class Auditor:
         hooks: t.Optional[t.List[ProtoHook]] = None,
         use_async: bool = False,
         **kwargs,
-    ) -> t.AuditDecorator[F]:
+    ) -> t.AuditDecorator:
         ...  # pragma: no cover
 
     @t.overload
@@ -194,7 +194,7 @@ class Auditor:
         hooks: t.Optional[t.List[ProtoHook]] = None,
         use_async: bool = False,
         **kwargs,
-    ) -> t.AuditedFunc[F]:
+    ) -> F:
         ...  # pragma: no cover
 
     def audit(
@@ -204,7 +204,7 @@ class Auditor:
         hooks: t.Optional[t.List[ProtoHook]] = None,
         use_async: bool = False,
         **kwargs,
-    ) -> t.Union[t.AuditDecorator[F], t.AuditedFunc[F]]:
+    ) -> t.Union[t.AuditDecorator, F]:
         """Wrap a function with a new auditing event. You can call ``audit`` either as a function
         decorator or as a regular method of :py:class:`Auditor`.
 
@@ -260,12 +260,12 @@ class Auditor:
         # we return another decorator that can be called around the function.
         if func is None:
 
-            def decorator(func: F) -> t.AuditedFunc[F]:
+            def decorator(func: F) -> F:
                 return self.audit(
                     event_name, func, hooks=hooks, use_async=use_async, **kwargs
                 )
 
-            return decorator
+            return t.cast(t.AuditDecorator, decorator)
 
         if callable(event_name):
             event_name = event_name(func)
@@ -299,11 +299,11 @@ class Auditor:
 
         # Add an __event_name__ attribute to the function so that users can easily look up
         # the name of the event. This is especially useful for events that are auto-named.
-        wrapper = t.cast(t.AuditedFunc[F], wrapper)
-        wrapper.__event_name__ = event_name
+        audit_func = t.cast(t.AuditedFunc[F], wrapper)
+        audit_func.__event_name__ = event_name
 
-        self.event_wrappers[event_name] = wrapper
-        return wrapper
+        self.event_wrappers[event_name] = audit_func
+        return audit_func
 
     def async_audit(
         self,
@@ -311,7 +311,7 @@ class Auditor:
         func: t.Optional[F] = None,
         hooks: t.Optional[t.List[ProtoHook]] = None,
         **kwargs,
-    ) -> t.Union[t.AuditDecorator[F], t.AuditedFunc[F]]:
+    ) -> t.Union[t.AuditDecorator, F]:
         """Call :py:meth:`audit` with `use_async=True`. See the documentation for :py:meth:`audit`
         for more information.
         """
