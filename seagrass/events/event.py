@@ -117,8 +117,6 @@ class Event(metaclass=ABCMeta):
 
         self.add_hooks(*hooks)
 
-        # Set the order of execution for prehooks and posthooks.
-
     def add_hooks(self, *hooks: ProtoHook) -> None:
         """Add new hooks to the event.
 
