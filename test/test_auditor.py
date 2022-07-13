@@ -38,15 +38,14 @@ class CreateAuditorTestCase(unittest.TestCase):
         # instance or as the name of a logger.
         self._configure_logger(logging.getLogger("test_logger"))
 
-        for logger in ("test_logger", logging.getLogger("test_logger")):
-            auditor = Auditor(logger=logger)
-            auditor.logger.info("Hello, world!")
-            auditor.logger.debug("This message shouldn't appear")
+        auditor = Auditor(logger="test_logger")
+        auditor.logger.info("Hello, world!")
+        auditor.logger.debug("This message shouldn't appear")
 
-            output = self.logging_output.getvalue()
-            self.assertEqual(output, "(INFO) test_logger: Hello, world!\n")
+        output = self.logging_output.getvalue()
+        self.assertEqual(output, "(INFO) test_logger: Hello, world!\n")
 
-            self._clear_logging_output()
+        self._clear_logging_output()
 
 
 class SimpleAuditorFunctionsTestCase(SeagrassTestCaseMixin, unittest.TestCase):

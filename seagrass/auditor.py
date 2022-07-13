@@ -12,7 +12,7 @@ DEFAULT_LOGGER_NAME: t.Final[str] = "seagrass"
 
 # A context variable that keeps track of the auditor's logger for the
 # current auditing context.
-_current_audit_logger: ContextVar[logging.Logger] = ContextVar("audit_logger")
+_current_audit_logger: ContextVar[str] = ContextVar("audit_logger")
 
 # A type variable used to represent a function that can take
 # arbitrary/unknown inputs and returns an arbitrary/unknown type
@@ -30,29 +30,27 @@ class Auditor:
     code.
     """
 
-    logger: logging.Logger
     events: t.Dict[str, Event]
     event_wrappers: t.Dict[str, t.Callable]
     hooks: t.Set[ProtoHook]
+    __logger_name: str
     __enabled: bool = False
 
-    def __init__(
-        self, logger: t.Union[str, logging.Logger] = DEFAULT_LOGGER_NAME
-    ) -> None:
+    def __init__(self, logger: str = DEFAULT_LOGGER_NAME) -> None:
         """Create a new Auditor instance.
 
         :param Union[str,logging.Logger] logger: The logger that this auditor should use. When set
             to a string the auditor uses the logger returned by ``logging.getLogger(logger)``.
         """
-        if isinstance(logger, logging.Logger):
-            self.logger = logger
-        else:
-            self.logger = logging.getLogger(logger)
-
+        self.__logger_name = logger
         self.events = dict()
         self.event_wrappers = dict()
         self.hooks = set()
         self.reset_filter()
+
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger(self.__logger_name)
 
     @property
     def enabled(self) -> bool:
@@ -151,7 +149,7 @@ class Auditor:
             auditing context.
         """
         try:
-            logger_token = _current_audit_logger.set(self.logger)
+            logger_token = _current_audit_logger.set(self.__logger_name)
 
             if filter is not None:
                 old_filter = self.event_filter
@@ -444,12 +442,12 @@ T = t.TypeVar("T")
 
 @t.overload
 def get_audit_logger(default: t.Missing) -> logging.Logger:
-    ...
+    ...  # pragma: no cover
 
 
 @t.overload
 def get_audit_logger(default: T) -> t.Union[logging.Logger, T]:
-    ...
+    ...  # pragma: no cover
 
 
 def get_audit_logger(default: t.Maybe[T] = t.MISSING) -> t.Union[logging.Logger, T]:
@@ -465,6 +463,10 @@ def get_audit_logger(default: t.Maybe[T] = t.MISSING) -> t.Union[logging.Logger,
         ``default`` is provided).
     """
     if isinstance(default, t.Missing):
-        return _current_audit_logger.get()
+        logger_name: t.Optional[str] = _current_audit_logger.get()
     else:
-        return _current_audit_logger.get(default)
+        logger_name = _current_audit_logger.get(None)
+        if logger_name is None:
+            return default
+
+    return logging.getLogger(logger_name)

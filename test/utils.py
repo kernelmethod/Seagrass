@@ -71,11 +71,10 @@ class SeagrassTestCaseMixin:
         }
 
         logging.config.dictConfig(config)
-        self.logger = logging.getLogger("test.seagrass")
 
         # Create a new auditor instance with the logger we just
         # set up
-        self.auditor = Auditor(logger=self.logger)
+        self.auditor = Auditor(logger="test.seagrass")
 
 
 class HookTestCaseMixin(SeagrassTestCaseMixin):
