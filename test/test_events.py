@@ -180,13 +180,6 @@ class EventsTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.assertEqual(set(events_counter), set())
         self.assertEqual(set(args_dict), set())
 
-    @req_python_version(max=(3, 8))
-    def test_get_error_with_runtime_events_for_python_before_38(self):
-        """For Python versions before 3.8, sys.audit and sys.addaudithook do not exist, so
-        an exception should be raised if raise_runtime_events=True."""
-        with self.assertRaises(NotImplementedError):
-            self.auditor.create_event("my_test_event", raise_runtime_events=True)
-
     def test_auto_name_event(self):
         from pathlib import Path
 

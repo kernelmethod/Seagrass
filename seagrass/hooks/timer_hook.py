@@ -5,6 +5,7 @@ import time
 import seagrass._typing as t
 from collections import defaultdict
 from seagrass.base import ProtoHook
+from ._utils import HookContext
 
 
 class TimerHook(ProtoHook[float]):
@@ -35,6 +36,7 @@ class TimerHook(ProtoHook[float]):
         self.event_times.clear()
 
     def log_results(self, logger: logging.Logger) -> None:
-        logger.info("%s results:", self.__class__.__name__)
         for event in sorted(self.event_times):
-            logger.info("    Time spent in %s: %f", event, self.event_times[event])
+            hook_ctx = {"event": event, "time": self.event_times[event]}
+            with HookContext("TimerHook", hook_ctx):
+                logger.info("TimerHook results")

@@ -2,7 +2,7 @@ import sys
 import seagrass._typing as t
 from contextlib import contextmanager
 from functools import wraps
-from seagrass import get_audit_logger
+from seagrass.auditor import get_audit_logger
 from seagrass.base import ProtoHook
 
 # Type variable used to represent value returned from a function

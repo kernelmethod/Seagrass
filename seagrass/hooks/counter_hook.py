@@ -2,6 +2,7 @@ import logging
 import seagrass._typing as t
 from collections import Counter
 from seagrass.base import ProtoHook
+from ._utils import HookContext
 
 
 class CounterHook(ProtoHook[None]):
@@ -51,11 +52,12 @@ class CounterHook(ProtoHook[None]):
         self.event_counter.clear()
 
     def log_results(self, logger: logging.Logger) -> None:
-        logger.info("Calls to events recorded by %s:", self.__class__.__name__)
-
         if len(self.event_counter) == 0:
-            logger.info("    (no events recorded)")
+            with HookContext("CounterHook", {}):
+                logger.warning("no events recorded by counter")
             return
 
         for event in sorted(self.event_counter):
-            logger.info("    %s: %d", event, self.event_counter[event])
+            ctx = {"event": event, "count": self.event_counter[event]}
+            with HookContext("CounterHook", ctx):
+                logger.info("CounterHook results")

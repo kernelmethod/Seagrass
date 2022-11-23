@@ -1,14 +1,25 @@
 # Testing utilities and base classes for testing Seagrass
 
 import asyncio
+import datetime
 import logging
 import logging.config
 import sys
 import seagrass._typing as t
 from functools import wraps
 from io import StringIO
+from pythonjsonlogger import jsonlogger
 from seagrass import Auditor
 from seagrass.base import ProtoHook
+
+
+class LogFormatter(jsonlogger.JsonFormatter):   # type: ignore
+    def add_fields(self, log_record, record, message_dict):
+        super(LogFormatter, self).add_fields(log_record, record, message_dict)
+
+        timestamp = datetime.datetime.fromtimestamp(record.created)
+        log_record["timestamp"] = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        log_record["level"] = record.levelname
 
 
 def async_test(func):
@@ -23,58 +34,47 @@ def async_test(func):
 class SeagrassTestCaseMixin:
 
     logging_output: StringIO
-    logger: logging.Logger
     auditor: Auditor
 
     # Whether to emit logs that are >= WARNING to stdout
     log_warnings_to_stdout: bool = True
 
+    @property
+    def logger(self) -> logging.Logger:
+        return logging.getLogger(self.__logger_name)
+
     def setUp(self) -> None:
         # Set up logging configuration
         self.logging_output = StringIO()
+        self.__logger_name = "test.seagrass"
 
         handlers = ["default"]
         if self.log_warnings_to_stdout:
             handlers.append("warnings")
 
-        config = {
-            "version": 1,
-            "disable_existing_loggers": True,
-            "formatters": {
-                "standard": {
-                    "format": "(%(levelname)s) %(message)s",
-                },
-            },
-            "handlers": {
-                "default": {
-                    "level": "DEBUG",
-                    "formatter": "standard",
-                    "class": "logging.StreamHandler",
-                    "stream": self.logging_output,
-                },
-                # Add an additional handler for warnings that goes out to stdout. This way, if
-                # any warnings/errors show up during tests, we can view them in the test output.
-                "warnings": {
-                    "level": "WARNING",
-                    "formatter": "standard",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-            },
-            "loggers": {
-                "test.seagrass": {
-                    "handlers": handlers,
-                    "level": "DEBUG",
-                    "propagate": False,
-                },
-            },
-        }
+        formatter = LogFormatter()
 
-        logging.config.dictConfig(config)
+        self.log_buffer_handler = logging.StreamHandler(stream=self.logging_output)
+        self.log_buffer_handler.setLevel(logging.DEBUG)
+        self.log_buffer_handler.setFormatter(formatter)
+
+        self.log_stdout_handler = logging.StreamHandler()
+        self.log_stdout_handler.setLevel(logging.WARNING)
+        self.log_stdout_handler.setFormatter(formatter)
+
+        self.logger.addHandler(self.log_buffer_handler)
+        if self.log_warnings_to_stdout:
+            self.logger.addHandler(self.log_stdout_handler)
+        self.logger.setLevel(logging.DEBUG)
 
         # Create a new auditor instance with the logger we just
         # set up
-        self.auditor = Auditor(logger="test.seagrass")
+        self.auditor = Auditor(logger=self.__logger_name)
+
+    def tearDown(self):
+        self.logger.removeHandler(self.log_buffer_handler)
+        if self.log_warnings_to_stdout:
+            self.logger.removeHandler(self.log_stdout_handler)
 
 
 class HookTestCaseMixin(SeagrassTestCaseMixin):

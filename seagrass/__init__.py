@@ -1,6 +1,7 @@
 # flake8: noqa: F401
 import functools as _functools
 import seagrass._typing as t
+from ._logging import SeagrassLogFilter
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
 from .events import get_current_event
 from . import base, errors, events, hooks
@@ -145,6 +146,7 @@ __all__ = [
     "hooks",
     "DEFAULT_LOGGER_NAME",
     "Auditor",
+    "SeagrassLogFilter",
     "get_audit_logger",
     "get_current_event",
     "global_auditor",

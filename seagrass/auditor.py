@@ -3,6 +3,7 @@ import logging
 import seagrass._typing as t
 from contextlib import contextmanager
 from contextvars import ContextVar
+from seagrass._logging import SeagrassLogFilter
 from seagrass.base import LogResultsHook, ProtoHook, ResettableHook
 from seagrass.errors import EventNotFoundError
 from seagrass.events import Event, AsyncEvent, SyncEvent
@@ -10,13 +11,12 @@ from seagrass.events import Event, AsyncEvent, SyncEvent
 # The name of the default logger used by Seagrass
 DEFAULT_LOGGER_NAME: t.Final[str] = "seagrass"
 
-# A context variable that keeps track of the auditor's logger for the
-# current auditing context.
-_current_audit_logger: ContextVar[str] = ContextVar("audit_logger")
+# A context variable that keeps track of the current Auditor, if
+# one is being executed.
+_current_auditor: ContextVar["Auditor"] = ContextVar("seagrass_auditor")
 
-# A type variable used to represent a function that can take
-# arbitrary/unknown inputs and returns an arbitrary/unknown type
 F = t.TypeVar("F", bound=t.Callable)
+T = t.TypeVar("T")
 
 
 def _empty_event_func(*args, **kwargs) -> None:
@@ -33,7 +33,8 @@ class Auditor:
     events: t.Dict[str, Event]
     event_wrappers: t.Dict[str, t.Callable]
     hooks: t.Set[ProtoHook]
-    __logger_name: str
+    logger_name: str
+    __logger_filter: SeagrassLogFilter
     __enabled: bool = False
 
     def __init__(self, logger: str = DEFAULT_LOGGER_NAME) -> None:
@@ -42,15 +43,18 @@ class Auditor:
         :param Union[str,logging.Logger] logger: The logger that this auditor should use. When set
             to a string the auditor uses the logger returned by ``logging.getLogger(logger)``.
         """
-        self.__logger_name = logger
+        self.logger_name = logger
         self.events = dict()
         self.event_wrappers = dict()
         self.hooks = set()
+        self.__logger_filter = SeagrassLogFilter()
         self.reset_filter()
 
     @property
     def logger(self) -> logging.Logger:
-        return logging.getLogger(self.__logger_name)
+        logger = logging.getLogger(self.logger_name)
+        logger.addFilter(self.__logger_filter)
+        return logger
 
     @property
     def enabled(self) -> bool:
@@ -149,7 +153,7 @@ class Auditor:
             auditing context.
         """
         try:
-            logger_token = _current_audit_logger.set(self.__logger_name)
+            auditor_token = _current_auditor.set(self)
 
             if filter is not None:
                 old_filter = self.event_filter
@@ -160,7 +164,7 @@ class Auditor:
 
         finally:
             self.toggle_auditing(False)
-            _current_audit_logger.reset(logger_token)
+            _current_auditor.reset(auditor_token)
 
             if filter is not None:
                 self.event_filter = old_filter
@@ -436,8 +440,44 @@ class Auditor:
                 hook.log_results(self.logger)
 
 
-# Type variable used to represent default value provided to get_audit_logger
-T = t.TypeVar("T")
+@t.overload
+def get_auditor() -> Auditor:
+    ...  # pragma: no cover
+
+
+@t.overload
+def get_auditor(default: t.Missing) -> Auditor:
+    ...  # pragma: no cover
+
+
+@t.overload
+def get_auditor(default: T) -> t.Union[Auditor, T]:
+    ...  # pragma: no cover
+
+
+def get_auditor(default: t.Maybe[T] = t.MISSING) -> t.Union[Auditor, T]:
+    """Get the current auditor, if in an active auditing context.
+
+    This function only works in auditing contexts created by :py:meth:`Auditor.audit`; it will
+    be unable to get the auditor for the current auditing context if you use
+    :py:meth:`Auditor.toggle_auditing`.
+
+    :return: the auditor for the current auditing context, or ``default`` if no auditing
+        context has been created.
+    :rtype: t.Union[logging.Logger,T]
+    :raises LookupError: if this function is called outside of an auditing context (and no
+        ``default`` is provided).
+    """
+
+    if isinstance(default, t.Missing):
+        return _current_auditor.get()
+    else:
+        return _current_auditor.get(default)
+
+
+@t.overload
+def get_audit_logger() -> logging.Logger:
+    ...  # pragma: no cover
 
 
 @t.overload
@@ -457,16 +497,18 @@ def get_audit_logger(default: t.Maybe[T] = t.MISSING) -> t.Union[logging.Logger,
     be unable to get the logger for the current auditing context if you use
     :py:meth:`Auditor.toggle_auditing`.
 
-    :return: the logger for the most recent auditing context.
+    :return: the logger for the most recent auditing context, or ``default`` if no auditing
+        context has been created.
     :rtype: t.Union[logging.Logger,T]
     :raises LookupError: if this function is called outside of an auditing context (and no
         ``default`` is provided).
     """
-    if isinstance(default, t.Missing):
-        logger_name: t.Optional[str] = _current_audit_logger.get()
-    else:
-        logger_name = _current_audit_logger.get(None)
-        if logger_name is None:
-            return default
 
-    return logging.getLogger(logger_name)
+    if isinstance(default, t.Missing):
+        return get_auditor().logger
+
+    auditor = get_auditor(None)
+    if auditor is None:
+        return default
+
+    return auditor.logger
