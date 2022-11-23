@@ -1,0 +1,11 @@
+version: '3'
+services:
+  runner:
+    image: seagrass-runner:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        PYTHON_VERSION: "3.8"
+    # volumes:
+    # - "..:/home/python/workspace:ro"

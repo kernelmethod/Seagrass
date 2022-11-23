@@ -3,6 +3,14 @@ from contextvars import ContextVar, Token
 
 current_hook_ctx: ContextVar["HookContext"] = ContextVar("seagrass_hook_ctx")
 
+if _t.TYPE_CHECKING:
+    import sys
+
+    if sys.version_info >= (3, 9):
+        CtxType = Token["HookContext"]
+    else:
+        CtxType = Token
+
 
 class HookContext:
     """Logging context provided by a hook that gets attached to logs."""
@@ -11,7 +19,7 @@ class HookContext:
 
     name: str
     args: _t.Dict[str, _t.Any]
-    previous_ctx: _t.Optional[Token["HookContext"]]
+    previous_ctx: _t.Optional["CtxType"]
 
     def __init__(self, name: str, args: _t.Dict[str, _t.Any]) -> None:
         """Create a new ``HookContext`` instance."""

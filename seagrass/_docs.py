@@ -5,7 +5,7 @@
 import logging
 import logging.config
 import sys
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import jsonlogger     # type: ignore
 from seagrass import DEFAULT_LOGGER_NAME
 
 
@@ -29,34 +29,5 @@ def configure_logging(name: str = DEFAULT_LOGGER_NAME) -> logging.Logger:
 
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
-
-    """
-    logging.config.dictConfig(
-        {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "standard": {
-                    "format": "(%(levelname)s) %(name)s: %(message)s",
-                },
-            },
-            "handlers": {
-                "default": {
-                    "level": "DEBUG",
-                    "formatter": "LogFormatter",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-            },
-            "loggers": {
-                DEFAULT_LOGGER_NAME: {
-                    "handlers": ["default"],
-                    "level": "DEBUG",
-                    "propagate": False,
-                },
-            },
-        }
-    )
-    """
 
     return logger
