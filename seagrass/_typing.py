@@ -4,7 +4,6 @@
 # Seagrass code should import type annotations from this module rather
 # than from `typing` to ensure version compatibility
 
-from sys import version_info as _version_info
 from typing import *
 
 # The __all__ list includes all of the attributes of typing that were
@@ -16,15 +15,6 @@ __all__ += _t.__all__  # type: ignore[attr-defined]
 
 # Import additional attributes for Python < 3.8
 _extended_attrs = ["Final", "Literal", "Protocol", "runtime_checkable"]
-
-if _version_info < (3, 8):
-    import typing_extensions as _t_ext
-
-    for attr in filter(lambda attr: attr not in __all__, _extended_attrs):
-        # Dynamically bring the attribute into scope by updating the globals
-        # dictionary
-        globals().update({attr: getattr(_t_ext, attr)})
-        __all__.append(attr)
 
 # Additional types for Seagrass:
 class Missing:
