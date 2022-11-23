@@ -1,5 +1,6 @@
 # Tests for the TimerHook auditing hook
 
+import json
 import time
 import unittest
 from test.utils import HookTestCaseMixin
@@ -27,10 +28,14 @@ class TimerHookTestCase(HookTestCaseMixin, unittest.TestCase):
         self.auditor.log_results()
         self.logging_output.seek(0)
         output = [line.rstrip() for line in self.logging_output.readlines()]
-        self.assertEqual(output[0], "(INFO) TimerHook results:")
-        self.assertEqual(
-            output[1], "(INFO)     Time spent in test.time.sleep: %f" % recorded_time
-        )
+        output = [json.loads(line) for line in output]
+
+        self.assertTrue(all(o.get("level") == "INFO" for o in output))
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output[0]["message"], "TimerHook results")
+        self.assertEqual(output[0]["seagrass"]["hook"], "TimerHook")
+        self.assertEqual(output[0]["seagrass"]["hook_ctx"]["event"], "test.time.sleep")
+        self.assertEqual(output[0]["seagrass"]["hook_ctx"]["time"], recorded_time)
 
 
 if __name__ == "__main__":

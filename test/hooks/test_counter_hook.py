@@ -3,6 +3,7 @@
 from seagrass.base import ResettableHook, LogResultsHook
 from seagrass.hooks import CounterHook
 from test.utils import HookTestCaseMixin
+import json
 import unittest
 
 
@@ -49,11 +50,17 @@ class CounterHookTestCase(HookTestCaseMixin, unittest.TestCase):
                 self.auditor.raise_event("event_c")
 
         lines = self.logging_output.getvalue().rstrip().split("\n")
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], "(INFO) Calls to events recorded by CounterHook:")
-        self.assertEqual(lines[1], "(INFO)     event_a: 441")
-        self.assertEqual(lines[2], "(INFO)     event_b: 904")
-        self.assertEqual(lines[3], "(INFO)     event_c: 58")
+        output = [json.loads(line) for line in lines]
+        self.assertEqual(len(lines), 3)
+        self.assertTrue(all(o["level"] == "INFO" for o in output))
+        self.assertTrue(all(o["seagrass"]["hook"] == "CounterHook" for o in output))
+
+        self.assertEqual(output[0]["seagrass"]["hook_ctx"]["event"], "event_a")
+        self.assertEqual(output[0]["seagrass"]["hook_ctx"]["count"], 441)
+        self.assertEqual(output[1]["seagrass"]["hook_ctx"]["event"], "event_b")
+        self.assertEqual(output[1]["seagrass"]["hook_ctx"]["count"], 904)
+        self.assertEqual(output[2]["seagrass"]["hook_ctx"]["event"], "event_c")
+        self.assertEqual(output[2]["seagrass"]["hook_ctx"]["count"], 58)
 
     def test_disable_counter_hook(self):
         self.auditor.create_event("my_event", hooks=[self.hook])

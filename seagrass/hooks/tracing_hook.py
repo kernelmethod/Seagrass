@@ -50,8 +50,8 @@ class TracingHook(CleanupHook[TracingHookContext]):
 
         >>> with seagrass.start_auditing():
         ...     example()
-        (INFO) seagrass: Found MY_VAR=100
-        (INFO) seagrass: Found MY_VAR='hello, world!'
+        {"message": "Found MY_VAR=100", "seagrass": {"event": "example"}, "level": "INFO"}
+        {"message": "Found MY_VAR='hello, world!'", "seagrass": {"event": "example"}, "level": "INFO"}
     """
 
     class TraceFunc(t.Protocol):

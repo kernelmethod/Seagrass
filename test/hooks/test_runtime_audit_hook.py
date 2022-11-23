@@ -1,5 +1,6 @@
 # Tests for the RuntimeAuditHook abstract base class.
 
+import json
 import sys
 import tempfile
 import unittest
@@ -128,9 +129,11 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
         with self.auditor.start_auditing():
             self.my_event()
         output = self.logging_output.getvalue().rstrip()
+        output = json.loads(output)
+        self.assertEqual(output["level"], "ERROR")
         self.assertEqual(
-            output,
-            "(ERROR) ValueError raised in ErroneousHook.sys_hook: my_test_message",
+            output["message"],
+            "ValueError raised in ErroneousHook.sys_hook: my_test_message",
         )
 
     def test_hook_with_propagation(self):
@@ -138,22 +141,6 @@ class ErroneousRuntimeHookTestCase(RuntimeHookTestCaseMixin, unittest.TestCase):
         with self.auditor.start_auditing():
             with self.assertRaises(ValueError):
                 self.my_event()
-
-
-class RaiseExceptionForPythonBefore38(unittest.TestCase):
-    """RuntimeAuditHook tests that should be run for Python versions before 3.8, when sys.audit
-    and sys.addaudithook were added."""
-
-    @req_python_version(max=(3, 8))
-    def setUp(self):
-        pass
-
-    def test_get_error_when_creating_hook(self):
-        with self.assertRaises(NotImplementedError):
-            _ = FileOpenTestHook()
-
-        with self.assertRaises(NotImplementedError):
-            _ = ErroneousHook()
 
 
 if __name__ == "__main__":

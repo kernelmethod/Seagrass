@@ -4,7 +4,15 @@
 
 import logging
 import logging.config
+import sys
+from pythonjsonlogger import jsonlogger     # type: ignore
 from seagrass import DEFAULT_LOGGER_NAME
+
+
+class LogFormatter(jsonlogger.JsonFormatter):   # type: ignore
+    def add_fields(self, log_record, record, message_dict):
+        super(LogFormatter, self).add_fields(log_record, record, message_dict)
+        log_record["level"] = record.levelname
 
 
 def configure_logging(name: str = DEFAULT_LOGGER_NAME) -> logging.Logger:
@@ -14,31 +22,12 @@ def configure_logging(name: str = DEFAULT_LOGGER_NAME) -> logging.Logger:
     while logger.hasHandlers():
         logger.removeHandler(logger.handlers[0])
 
-    logging.config.dictConfig(
-        {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "standard": {
-                    "format": "(%(levelname)s) %(name)s: %(message)s",
-                },
-            },
-            "handlers": {
-                "default": {
-                    "level": "DEBUG",
-                    "formatter": "standard",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-            },
-            "loggers": {
-                DEFAULT_LOGGER_NAME: {
-                    "handlers": ["default"],
-                    "level": "DEBUG",
-                    "propagate": False,
-                },
-            },
-        }
-    )
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = LogFormatter()
+    handler.setFormatter(formatter)
 
-    return logging.getLogger(DEFAULT_LOGGER_NAME)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+
+    return logger

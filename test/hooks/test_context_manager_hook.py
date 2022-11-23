@@ -1,3 +1,4 @@
+import json
 import unittest
 from collections import Counter
 from seagrass import get_current_event, get_audit_logger
@@ -79,8 +80,11 @@ class CallableContextManagerHookTestCase(HookTestCaseMixin, unittest.TestCase):
             bar()
 
         output = self.logging_output.getvalue().rstrip().split("\n")
-        self.assertEqual(output[0], "(DEBUG) Calling test.bar")
-        self.assertEqual(output[1], "(DEBUG) Exiting test.bar")
+        output = [json.loads(o) for o in output]
+
+        self.assertTrue(all(o["level"] == "DEBUG" for o in output))
+        self.assertEqual(output[0]["message"], "Calling test.bar")
+        self.assertEqual(output[1]["message"], "Exiting test.bar")
 
         self.hook.nest = True
 
@@ -89,10 +93,13 @@ class CallableContextManagerHookTestCase(HookTestCaseMixin, unittest.TestCase):
 
         output = self.logging_output.getvalue().rstrip().split("\n")
         output = output[2:]
-        self.assertEqual(output[0], "(DEBUG) Calling test.bar")
-        self.assertEqual(output[1], "(DEBUG) Calling test.foo")
-        self.assertEqual(output[2], "(DEBUG) Exiting test.foo")
-        self.assertEqual(output[3], "(DEBUG) Exiting test.bar")
+        output = [json.loads(o) for o in output]
+
+        self.assertTrue(all(o["level"] == "DEBUG" for o in output))
+        self.assertEqual(output[0]["message"], "Calling test.bar")
+        self.assertEqual(output[1]["message"], "Calling test.foo")
+        self.assertEqual(output[2]["message"], "Exiting test.foo")
+        self.assertEqual(output[3]["message"], "Exiting test.bar")
 
 
 if __name__ == "__main__":

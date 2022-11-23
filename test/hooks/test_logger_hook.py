@@ -1,5 +1,6 @@
 # Tests for the LoggerHook auditing hook.
 
+import json
 import logging
 import unittest
 from functools import reduce
@@ -44,20 +45,29 @@ class LoggingHookTestCase(HookTestCaseMixin, unittest.TestCase):
             multiply_or_add(*args, **kwargs_add)
 
         output = self.logging_output.getvalue().rstrip().split("\n")
+        output = [json.loads(o) for o in output]
+
+        self.assertEqual(output[0]["level"], "DEBUG")
         self.assertEqual(
-            output[0], f"(DEBUG) hook_pre: {event}, args={args}, kwargs={{}}"
+            output[0]["message"], f"hook_pre: {event}, args={args}, kwargs={{}}"
         )
+        self.assertEqual(output[1]["level"], "INFO")
         self.assertEqual(
-            output[1], f"(INFO) hook_both: {event}, args={args}, kwargs={{}}"
+            output[1]["message"], f"hook_both: {event}, args={args}, kwargs={{}}"
         )
-        self.assertEqual(output[2], f"(INFO) hook_both: {event}, result={24}")
+        self.assertEqual(output[2]["level"], "INFO")
+        self.assertEqual(output[2]["message"], f"hook_both: {event}, result={24}")
+        self.assertEqual(output[3]["level"], "DEBUG")
         self.assertEqual(
-            output[3], f"(DEBUG) hook_pre: {event}, args={args}, kwargs={kwargs_add}"
+            output[3]["message"], f"hook_pre: {event}, args={args}, kwargs={kwargs_add}"
         )
+        self.assertEqual(output[4]["level"], "INFO")
         self.assertEqual(
-            output[4], f"(INFO) hook_both: {event}, args={args}, kwargs={kwargs_add}"
+            output[4]["message"],
+            f"hook_both: {event}, args={args}, kwargs={kwargs_add}",
         )
-        self.assertEqual(output[5], f"(INFO) hook_both: {event}, result={10}")
+        self.assertEqual(output[5]["level"], "INFO")
+        self.assertEqual(output[5]["message"], f"hook_both: {event}, result={10}")
 
 
 class MiscellaneousLoggingHookTestCase(SeagrassTestCaseMixin, unittest.TestCase):
@@ -87,5 +97,7 @@ class MiscellaneousLoggingHookTestCase(SeagrassTestCaseMixin, unittest.TestCase)
             foo()
 
         output = self.logging_output.getvalue().rstrip().split("\n")
-        self.assertEqual(output[0], "(DEBUG) prehook: event=test.foo")
-        self.assertEqual(output[1], "(DEBUG) posthook: event=test.foo")
+        output = [json.loads(o) for o in output]
+        self.assertTrue(all(o["level"] == "DEBUG" for o in output))
+        self.assertEqual(output[0]["message"], "prehook: event=test.foo")
+        self.assertEqual(output[1]["message"], "posthook: event=test.foo")

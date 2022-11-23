@@ -1,6 +1,7 @@
 # Tests for creating events out of async functions
 
 import asyncio
+import json
 import unittest
 from seagrass import get_current_event
 from seagrass.hooks import CounterHook, LoggingHook
@@ -31,8 +32,12 @@ class AsyncEventTestCase(SeagrassTestCaseMixin, unittest.TestCase):
         self.assertEqual(self.ctr_hook.event_counter["test.foo"], 1)
 
         output = self.logging_output.getvalue().rstrip().split("\n")
-        self.assertEqual(output[0], "(DEBUG) Starting test.foo")
-        self.assertEqual(output[1], "(DEBUG) Leaving test.foo")
+        output = [json.loads(o) for o in output]
+
+        self.assertEqual(len(output), 2)
+        self.assertTrue(all(o["level"] == "DEBUG" for o in output))
+        self.assertEqual(output[0]["message"], "Starting test.foo")
+        self.assertEqual(output[1]["message"], "Leaving test.foo")
 
     @async_test
     async def test_wrap_nested_async_events(self):

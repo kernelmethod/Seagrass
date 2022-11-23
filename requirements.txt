@@ -1,1 +1,1 @@
-typing_extensions>=3.10.0.0; python_version < "3.8.0"
+python-json-logger==2.0.4

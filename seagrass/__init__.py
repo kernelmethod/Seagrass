@@ -1,6 +1,7 @@
 # flake8: noqa: F401
 import functools as _functools
 import seagrass._typing as t
+from ._logging import SeagrassLogFilter
 from .auditor import Auditor, get_audit_logger, DEFAULT_LOGGER_NAME
 from .events import get_current_event
 from . import base, errors, events, hooks
@@ -49,6 +50,9 @@ def auto(func: t.Callable) -> str:
             >>> event.__event_name__
             'pathlib.Path.home'
     """
+    if func.__module__ is None:
+        return func.__qualname__    # type: ignore[unreachable]
+
     return f"{func.__module__}.{func.__qualname__}"
 
 
@@ -121,7 +125,7 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
         >>> with auditor.start_auditing():
         ...     my_event()
-        (DEBUG) seagrass: called my_event
+        {"message": "called my_event", "seagrass": {"event": "my_event"}, "level": "DEBUG"}
     """
 
     def __init__(self, auditor: t.Optional[Auditor] = None) -> None:
@@ -145,6 +149,7 @@ __all__ = [
     "hooks",
     "DEFAULT_LOGGER_NAME",
     "Auditor",
+    "SeagrassLogFilter",
     "get_audit_logger",
     "get_current_event",
     "global_auditor",

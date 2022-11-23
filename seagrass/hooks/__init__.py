@@ -1,4 +1,5 @@
 # flake8: noqa: F401
+
 from .context_manager_hook import ContextManagerHook
 from .counter_hook import CounterHook
 from .file_open_hook import FileOpenHook
@@ -19,3 +20,7 @@ __all__ = [
     "TimerHook",
     "TracingHook",
 ]
+
+from ._utils import get_hook_context, HookContext
+
+__all__ += ["get_hook_context", "HookContext"]

@@ -2,6 +2,7 @@ import logging
 import seagrass._typing as t
 from collections import Counter
 from seagrass.base import ProtoHook
+from ._utils import HookContext
 
 
 class CounterHook(ProtoHook[None]):
@@ -32,9 +33,10 @@ class CounterHook(ProtoHook[None]):
        ...         auditor.raise_event("event_a")
        ...     for _ in range(8):
        ...         auditor.raise_event("event_b")
-       (INFO) seagrass: Calls to events recorded by CounterHook:
-       (INFO) seagrass:     event_a: 15
-       (INFO) seagrass:     event_b: 8
+       {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", \
+"hook_ctx": {"event": "event_a", "count": 15}}, "level": "INFO"}
+       {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", \
+"hook_ctx": {"event": "event_b", "count": 8}}, "level": "INFO"}
     """
 
     event_counter: t.Counter[str]
@@ -51,11 +53,12 @@ class CounterHook(ProtoHook[None]):
         self.event_counter.clear()
 
     def log_results(self, logger: logging.Logger) -> None:
-        logger.info("Calls to events recorded by %s:", self.__class__.__name__)
-
         if len(self.event_counter) == 0:
-            logger.info("    (no events recorded)")
+            with HookContext("CounterHook", {}):
+                logger.warning("no events recorded by counter")
             return
 
         for event in sorted(self.event_counter):
-            logger.info("    %s: %d", event, self.event_counter[event])
+            ctx = {"event": event, "count": self.event_counter[event]}
+            with HookContext("CounterHook", ctx):
+                logger.info("CounterHook results")

@@ -30,12 +30,17 @@ author = "kernelmethod"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
+    "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
 ]
 
 autodoc_default_options = {
     "member-order": "bysource",
     "special-members": "__init__",
+}
+
+intersphinx_mapping = {
+    "stdlib": ("https://docs.python.org/3/", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.

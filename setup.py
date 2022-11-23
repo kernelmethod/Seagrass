@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
 
 setup(
     name="seagrass",
-    version="0.9.2",
+    version="0.10.0",
     description="Auditing and profiling multi-tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -31,6 +31,6 @@ setup(
     package_data={"seagrass": ["py.typed"]},
     packages=find_packages(exclude=["tests"]),
     install_requires=install_requires,
-    python_requires=">=3.7.0",
+    python_requires=">=3.8.0",
     license="BSD",
 )

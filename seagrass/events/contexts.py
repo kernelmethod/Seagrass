@@ -23,7 +23,8 @@ def get_current_event(default: T) -> t.Union[str, T]:
 def get_current_event(default: t.Maybe[T] = t.MISSING) -> t.Union[str, T]:
     """Get the current Seagrass event that is being executed.
 
-    :raises LookupError: if no Seagrass event is currently under execution.
+    :raises LookupError: if no Seagrass event is currently under execution, and
+        ``default`` is not specified.
     """
     if isinstance(default, t.Missing):
         return current_event.get()

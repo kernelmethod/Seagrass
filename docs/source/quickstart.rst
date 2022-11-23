@@ -51,7 +51,10 @@ function called ``event.sub``.
 
    import logging, sys
    from seagrass import Auditor
+   from seagrass._docs import configure_logging
+   configure_logging()
 
+   """
    fh = logging.StreamHandler(stream=sys.stdout)
    fh.setLevel(logging.INFO)
    formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
@@ -60,6 +63,7 @@ function called ``event.sub``.
    logger = logging.getLogger("seagrass")
    logger.setLevel(logging.INFO)
    logger.addHandler(fh)
+   """
 
    auditor = Auditor()
 
@@ -95,9 +99,8 @@ function called ``event.sub``.
 
 .. testoutput:: basic-quickstart-example
 
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     event.add: 2
-   (INFO) seagrass:     event.sub: 1
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "event.add", "count": 2}}, "level": "INFO"}
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "event.sub", "count": 1}}, "level": "INFO"}
 
 From here we can start doing more complicated tasks. For instance, here's an
 example where we override Python's ``time.sleep`` and measure the amount of time
@@ -140,7 +143,11 @@ new event ``my_sum.cumsum`` and call it at every iteration of the function
 
    import logging, sys
    from seagrass import Auditor
+   from seagrass._docs import configure_logging
 
+   configure_logging()
+
+   """
    fh = logging.StreamHandler(stream=sys.stdout)
    fh.setLevel(logging.DEBUG)
    formatter = logging.Formatter("(%(levelname)s) %(name)s: %(message)s")
@@ -149,8 +156,9 @@ new event ``my_sum.cumsum`` and call it at every iteration of the function
    logger = logging.getLogger("seagrass")
    logger.setLevel(logging.DEBUG)
    logger.addHandler(fh)
+   """
 
-   auditor = Auditor(logger=logger)
+   auditor = Auditor()
 
 .. doctest:: empty-auditing-events
 
@@ -171,8 +179,8 @@ new event ``my_sum.cumsum`` and call it at every iteration of the function
 
    >>> with auditor.start_auditing():
    ...     my_sum([1, 2, 3, 4])
-   (DEBUG) seagrass: cumsum=0.0
-   (DEBUG) seagrass: cumsum=1.0
-   (DEBUG) seagrass: cumsum=3.0
-   (DEBUG) seagrass: cumsum=6.0
+   {"message": "cumsum=0.0", "seagrass": {"event": "my_sum.cumsum"}, "level": "DEBUG"}
+   {"message": "cumsum=1.0", "seagrass": {"event": "my_sum.cumsum"}, "level": "DEBUG"}
+   {"message": "cumsum=3.0", "seagrass": {"event": "my_sum.cumsum"}, "level": "DEBUG"}
+   {"message": "cumsum=6.0", "seagrass": {"event": "my_sum.cumsum"}, "level": "DEBUG"}
    10.0
