@@ -41,11 +41,11 @@ _F = TypeVar("_F", bound=Callable)
 _FR = TypeVar("_FR", bound=Callable[..., _R])
 
 
-class AuditedFunc(_t.Generic[_FR]):
+class AuditedFunc(Protocol[_FR]):
 
     __event_name__: str
 
-    def __call__(*args, **kwargs) -> _R:
+    def __call__(*args, **kwargs) -> _R:    # type: ignore[type-var]
         ...
 
 
