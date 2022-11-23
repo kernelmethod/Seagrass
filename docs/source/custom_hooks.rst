@@ -234,15 +234,13 @@ results from each run. Here's an example where we use
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     audit.foo: 1
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "audit.foo", "count": 1}}, "level": "INFO"}
 
    >>> with auditor.start_auditing():
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     audit.foo: 2
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "audit.foo", "count": 2}}, "level": "INFO"}
 
 
 Notice that the second time we called ``log_results``, it contained the results
@@ -257,8 +255,7 @@ to reset results between runs, we need to call ``hook.reset()``:
    ...     auditor.raise_event("audit.foo")
 
    >>> auditor.log_results()
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     audit.foo: 1
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "audit.foo", "count": 1}}, "level": "INFO"}
 
 Alternatively, we could pass ``reset_hooks=True`` and ``log_results=True`` when
 we call ``auditor.audit``. This logs all hook results and then resets the hooks
@@ -270,14 +267,12 @@ when we leave the auditing context:
 
    >>> with auditor.start_auditing(reset_hooks=True, log_results=True):
    ...     auditor.raise_event("audit.foo")
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     audit.foo: 1
+   {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {"event": "audit.foo", "count": 1}}, "level": "INFO"}
 
    >>> # Since the hooks were reset, log_results won't show any recorded events
 
    >>> auditor.log_results()
-   (INFO) seagrass: Calls to events recorded by CounterHook:
-   (INFO) seagrass:     (no events recorded)
+   {"message": "no events recorded by counter", "seagrass": {"event": null, "hook": "CounterHook", "hook_ctx": {}}, "level": "WARNING"}
 
 A hook that implements the :py:class:`~seagrass.base.ResettableHook` interface
 by implementing :py:meth:`~seagrass.base.ResettableHook.reset` can be reset
@@ -328,7 +323,7 @@ logged when ``auditor.log_results()`` is called.
    ...     time.sleep(0.1)
 
    >>> auditor.log_results()
-   (INFO) seagrass: TotalElapsedTimeHook: elapsed time: 0.1s
+   {"message": "TotalElapsedTimeHook: elapsed time: 0.1s", "seagrass": {"event": null}, "level": "INFO"}
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 :py:class:`~seagrass.base.CleanupHook`: hooks with a cleanup stage

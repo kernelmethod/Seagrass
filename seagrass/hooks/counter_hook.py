@@ -33,9 +33,10 @@ class CounterHook(ProtoHook[None]):
        ...         auditor.raise_event("event_a")
        ...     for _ in range(8):
        ...         auditor.raise_event("event_b")
-       (INFO) seagrass: Calls to events recorded by CounterHook:
-       (INFO) seagrass:     event_a: 15
-       (INFO) seagrass:     event_b: 8
+       {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", \
+"hook_ctx": {"event": "event_a", "count": 15}}, "level": "INFO"}
+       {"message": "CounterHook results", "seagrass": {"event": null, "hook": "CounterHook", \
+"hook_ctx": {"event": "event_b", "count": 8}}, "level": "INFO"}
     """
 
     event_counter: t.Counter[str]

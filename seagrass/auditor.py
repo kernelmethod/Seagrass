@@ -93,7 +93,7 @@ class Auditor:
 
             >>> with auditor.start_auditing():
             ...     auditor.raise_event("example.foo")
-            (DEBUG) seagrass: example.foo called
+            {"message": "example.foo called", "seagrass": {"event": "example.foo"}, "level": "DEBUG"}
 
             >>> auditor.event_filter = lambda event: not event.startswith("example.")
 

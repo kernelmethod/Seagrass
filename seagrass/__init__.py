@@ -50,6 +50,9 @@ def auto(func: t.Callable) -> str:
             >>> event.__event_name__
             'pathlib.Path.home'
     """
+    if func.__module__ is None:
+        return func.__qualname__    # type: ignore[unreachable]
+
     return f"{func.__module__}.{func.__qualname__}"
 
 
@@ -122,7 +125,7 @@ class create_global_auditor(t.ContextManager[Auditor]):
 
         >>> with auditor.start_auditing():
         ...     my_event()
-        (DEBUG) seagrass: called my_event
+        {"message": "called my_event", "seagrass": {"event": "my_event"}, "level": "DEBUG"}
     """
 
     def __init__(self, auditor: t.Optional[Auditor] = None) -> None:
