@@ -22,10 +22,11 @@ setup(
         "Documentation": "https://seagrass.readthedocs.io/en/latest/",
     },
     classifiers=[
+        "System :: Logging",
+        "System :: Monitoring",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        "Operating System :: OS Independent",
     ],
     url="https://github.com/kernelmethod/Seagrass/",
     package_data={"seagrass": ["py.typed"]},
