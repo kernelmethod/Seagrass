@@ -11,6 +11,7 @@ from .timer_hook import TimerHook
 from .tracing_hook import TracingHook
 
 __all__ = [
+    "ContextManagerHook",
     "CounterHook",
     "FileOpenHook",
     "LoggingHook",
