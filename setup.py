@@ -22,8 +22,8 @@ setup(
         "Documentation": "https://seagrass.readthedocs.io/en/latest/",
     },
     classifiers=[
-        "System :: Logging",
-        "System :: Monitoring",
+        "Topic :: System :: Logging",
+        "Topic :: System :: Monitoring",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
