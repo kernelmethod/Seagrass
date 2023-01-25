@@ -70,6 +70,9 @@ class ProtoHook(t.Protocol[C]):
         :param C context: The context that was returned by the original call to ``prehook``.
         """
 
+        # By default, the posthook function does nothing
+        return
+
 
 @t.runtime_checkable
 class LogResultsHook(ProtoHook, t.Protocol):
